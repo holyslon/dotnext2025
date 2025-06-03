@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkingBot", "NetworkingBot\NetworkingBot.csproj", "{5127213C-15C1-4D01-B13F-DC69301F3A09}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetworkingBotTest", "NetworkingBotTest\NetworkingBotTest.csproj", "{FEF20F7B-1ACD-4F95-B93C-AC023D706634}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5127213C-15C1-4D01-B13F-DC69301F3A09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5127213C-15C1-4D01-B13F-DC69301F3A09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5127213C-15C1-4D01-B13F-DC69301F3A09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5127213C-15C1-4D01-B13F-DC69301F3A09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FEF20F7B-1ACD-4F95-B93C-AC023D706634}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FEF20F7B-1ACD-4F95-B93C-AC023D706634}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FEF20F7B-1ACD-4F95-B93C-AC023D706634}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FEF20F7B-1ACD-4F95-B93C-AC023D706634}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
