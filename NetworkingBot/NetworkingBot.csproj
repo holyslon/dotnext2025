@@ -4,6 +4,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
@@ -11,6 +12,12 @@
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0"/>
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0"/>
         <PackageReference Include="Telegram.Bot" Version="22.5.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>

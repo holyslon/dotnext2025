@@ -1,0 +1,33 @@
+name: dotnet package
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore -c Release
+      - name: Test with dotnet
+        run: dotnet test --no-restore --logger trx --results-directory "TestResults"
+      - name: Upload dotnet test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: networking-bot-tests-results
+          path: TestResults
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
+      - name: Package bot
+        run: dotnet publish NetworkingBot/NetworkingBot.csproj --no-restore --no-build -o build/ -c Release /p:UseAppHost=false
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: networking-bot
+          path: build
