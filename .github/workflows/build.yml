@@ -43,14 +43,14 @@ jobs:
         id: login-cr
         uses: yc-actions/yc-cr-login@v3
         with:
-          yc-sa-json-credentials: $${ secrets.YC_CONTAINER_REGISTRY_CREDENTIALS }}
+          yc-sa-json-credentials: $${{ secrets.YC_CONTAINER_REGISTRY_CREDENTIALS }}
       - uses: actions/download-artifact@v4
         with:
           name: networking-bot
           path: build
       - name: Build, tag, and push image to Yandex Cloud Container Registry
         env:
-          CR_REGISTRY: $${ secrets.YC_CONTAINER_REGISTRY }}
+          CR_REGISTRY: $${{ secrets.YC_CONTAINER_REGISTRY }}
           CR_REPOSITORY: networking-bot
           IMAGE_TAG: ${{ env.BOT_VERSION }}
         run: |
