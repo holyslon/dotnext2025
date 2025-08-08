@@ -1,6 +1,6 @@
-namespace NetworkingBot;
+namespace NetworkingBot.Infrastructure;
 
 public class TelegramOptions
-{
-    public string Token { get; init; }
+{   
+    public string? Token { get; init; }
 }

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using NetworkingBot;
 using NetworkingBot.Commands;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -165,9 +164,9 @@ internal class BotMock : ITelegramBotClient
     
     public class SendMessageRequestAssert(BotMock botMock)
     {
-        private long? _chatId = null;
-        private string? _text = null;
-        private ParseMode? _parseMode = null;
+        private long? _chatId;
+        private string? _text;
+        private ParseMode? _parseMode;
         private readonly List<(string text, string callback)> _inlineCallbackButtons = [];
 
         public SendMessageRequestAssert ForChat(long chatId)

@@ -5,12 +5,12 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Requests.Abstractions;
 using Telegram.Bot.Types;
 
-namespace NetworkingBot;
+namespace NetworkingBot.Infrastructure;
 
 public class TelegramBot(IOptions<TelegramOptions> options)
     : ITelegramBotClient
 {
-    private readonly TelegramBotClient _botClient = new(options.Value.Token);
+    private readonly TelegramBotClient _botClient = new(options.Value.Token!);
 
 
     public Task<TResponse> SendRequest<TResponse>(IRequest<TResponse> request,

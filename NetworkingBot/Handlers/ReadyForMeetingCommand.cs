@@ -5,7 +5,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace NetworkingBot.Handlers;
 
-internal class ReadyForMeetingCommand(ILogger<ReadyForMeeting> logger, IUserStorage userStorage, IConversationTopicStorage topicStorage, IPollStorage pollStorage)  : UserUniversalCommandHandler<ReadyForMeeting>(logger, userStorage)
+internal class ReadyForMeetingCommand(ILogger<ReadyForMeeting> logger, IUserStorage userStorage)  : UserUniversalCommandHandler<ReadyForMeeting>(logger, userStorage)
 {
     protected override async  ValueTask Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
         Domain.User domainUser, long chatId)

@@ -1,7 +1,7 @@
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 
-namespace NetworkingBot;
+namespace NetworkingBot.Infrastructure;
 
 public class TelegramHostedService(ILogger<TelegramHostedService> logger, IUpdateHandler updateHandler, TelegramBot bot)
     : BackgroundService

@@ -18,12 +18,10 @@ public class User(long chatId, long userId, string name)
     
     private ParticipationMode _participationMode = ParticipationMode.Unknown;
     private readonly List<ConversationTopic> _topics = [];
-    private readonly List<MeetingResult> _completedMeetings = [];
     
-    private bool _isActive = false;
-    private bool _readyToParticipate = false;
-    private Meeting? _currentMeeting = null;
-    private MeetingResult? _lastMeeting = null;
+    private bool _isActive;
+    private bool _readyToParticipate;
+    private Meeting? _currentMeeting;
     
     public void OptIn()
     {
@@ -91,19 +89,9 @@ public class User(long chatId, long userId, string name)
 
     public void MeetingCompleted()
     {
-        if (_currentMeeting != null)
-        {
-            var result = new MeetingResult(_currentMeeting, true);
-            _completedMeetings.Add(result);
-            _lastMeeting = result;
-            _currentMeeting = null;
-        }
+        _currentMeeting = null;
     }
 
-    public void AddReview(Review review)
-    {
-        _lastMeeting?.AddReview(review);
-    }
     public void SetConversationTopics(ImmutableArray<ConversationTopic> topics)
     {
         _topics.Clear();
@@ -116,26 +104,14 @@ public class User(long chatId, long userId, string name)
 
     public record LinkData(long UserId, string Name);
 
-    public LinkData Link => new LinkData(userId, name);
+    public LinkData Link => new(userId, name);
 
     public void MeetingCanceled()
     {
-        if (_currentMeeting != null)
-        {
-            var result = new MeetingResult(_currentMeeting, false);
-            _completedMeetings.Add(result);
-            _lastMeeting = result;
-            _currentMeeting = null;
-        }
+        _currentMeeting = null;
     }
     
     public bool CanBeInMatchResult => _isActive &&  _readyToParticipate;
-}
-
-public class MeetingResult(Meeting meeting, bool IsHappened)
-{
-    public void AddReview(Review review)
-    {}
 }
 
 public class Meeting(User one, User another)
@@ -144,5 +120,3 @@ public class Meeting(User one, User another)
     public User Another { get; } = another;
     
 };
-
-public class Review(string Comment);
