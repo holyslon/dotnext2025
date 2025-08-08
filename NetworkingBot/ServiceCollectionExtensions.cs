@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using NetworkingBot.Conversations;
 using NetworkingBot.Handlers;
+using NetworkingBot.Infrastructure;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -12,18 +12,30 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddNetworkingBot(this IServiceCollection services)
     {
         services.AddSingleton<IUpdateHandler, UpdateHandler>();
-        services.AddSingleton<ConversationDb>();
         services.AddTelegramEventHandlers<Message>(opts =>
-            opts.Add<StartHandler>()
-                .Add<JoinHandler>()
-                .Add<CancelHandler>()
-                .Add<EventFinishedHandler>()
-                .Add<MatchmakeHandler>());
+            opts.Add<StartCommandHandler>()
+                .Add<JoinCommandHandler>()
+                .Add<OnlineCommandHandler>()
+                .Add<OfflineCommandHandler>()
+                .Add<MeetingHappenCommandHandler>()
+                .Add<MeetingCanceledCommandHandler>()
+                .Add<PostponeCommandHandler>());
         services.AddTelegramEventHandlers<CallbackQuery>(opts =>
-            opts.Add<StartHandler>()
-                .Add<EventFinishedHandler>());
+            opts.Add<JoinCommandHandler>()
+                .Add<OnlineCommandHandler>()
+                .Add<OfflineCommandHandler>()
+                .Add<ReadyForMeetingCommand>()
+                .Add<MeetingHappenCommandHandler>()
+                .Add<MeetingCanceledCommandHandler>()
+                .Add<PostponeCommandHandler>());
+        services.AddTelegramEventHandlers<Poll>(opts =>
+            opts.Add<ConversationTopicPoolResponse>());
 
-        services.AddSingleton<IMatchmakingService, MatchmakingService>();
+        services.AddSingleton<IUserStorage, UserStorage>();
+        services.AddSingleton<IConversationTopicStorage, ConversationTopicStorage>();
+        services.AddSingleton<IPollStorage, PollStorage>();
+        services.AddSingleton<IMatchService, MatchService>();
+
         return services;
     }
 
@@ -34,15 +46,24 @@ public static class ServiceCollectionExtensions
         IServiceProvider serviceProvider,
         CompositeEventHandlerConfig<T> config) : ITelegramEventHandler<T>
     {
-        public async Task OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken)
+        public async ValueTask OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken)
         {
             foreach (var configHandler in config.Handlers)
             {
                 using var _ = logger.BeginScope(new { HandlerType = configHandler.Name });
-                if (serviceProvider.GetService(configHandler) is ITelegramEventHandler<T> handler)
-                    await handler.OnEvent(bot, eventPayload, cancellationToken);
-                else
-                    logger.LogInformation("Fail to find handler in di");
+                try
+                {
+                    if (serviceProvider.GetService(configHandler) is ITelegramEventHandler<T> handler)
+                        await handler.OnEvent(bot, eventPayload, cancellationToken);
+                    else
+                        logger.LogInformation("Fail to find handler in di");
+                }
+                catch (ObjectDisposedException e)
+                {
+                    logger.LogInformation(e, "Service collection disposed");
+                    break;
+                }
+
             }
         }
     }

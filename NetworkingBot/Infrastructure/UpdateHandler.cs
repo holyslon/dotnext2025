@@ -3,7 +3,7 @@ using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
-namespace NetworkingBot;
+namespace NetworkingBot.Infrastructure;
 
 public class UpdateHandler(ILogger<UpdateHandler> logger, IServiceProvider serviceProvider) : IUpdateHandler
 {
@@ -12,7 +12,7 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, IServiceProvider servi
         using var _ = logger.BeginScope(new { UpdateType = typeof(T).Name });
         using var scope = serviceProvider.CreateScope();
         var handler = scope.ServiceProvider.GetService<ITelegramEventHandler<T>>();
-        if (handler != null) return handler.OnEvent(bot, update, cancellationToken);
+        if (handler != null) return handler.OnEvent(bot, update, cancellationToken).AsTask();
         logger.LogWarning("Handler for event not found");
         return Task.CompletedTask;
     }

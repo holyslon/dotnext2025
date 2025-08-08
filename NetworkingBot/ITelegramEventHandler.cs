@@ -2,7 +2,7 @@ using Telegram.Bot;
 
 namespace NetworkingBot;
 
-internal interface ITelegramEventHandler<T>
+internal interface ITelegramEventHandler<in T>
 {
-    Task OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken);
+    ValueTask OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken);
 }
