@@ -1,0 +1,8 @@
+*local.auto.tfvars
+*.tfbackend
+*key.json
+.terraform/
+*secret.auto.tfvars
+*secret.auto.tfvars.json
+*.pem
+plan

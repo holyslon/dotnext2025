@@ -1,0 +1,13 @@
+# This file is maintained automatically by "terraform init".
+# Manual edits may be lost in future updates.
+
+provider "registry.terraform.io/yandex-cloud/yandex" {
+  version = "0.149.0"
+  hashes = [
+    "h1:5hO2KSDeldB46k2tegzDnccdyKEB2VGWLzauTyVmeiE=",
+    "h1:H3HSBTTo5jXWi8LLj+E7AcUGnRx0fQbkSJmfKbmcBRc=",
+    "h1:fKYV5Qx4BF6GVmMg+T6Ky/xE3hxTgtLmusI+vLRel+o=",
+    "h1:gQZ5BiY542dV9QKjA9UQFI/s86IpArLuiD8aVJiMqEc=",
+    "h1:rqY/U82x1/nx9HhBv9WqsHFpQiykR1BIu5kQWyoXlwU=",
+  ]
+}

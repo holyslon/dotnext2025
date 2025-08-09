@@ -23,7 +23,6 @@ jobs:
         with:
           name: networking-bot-tests-results
           path: TestResults
-        # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
       - name: Package bot
         run: dotnet publish NetworkingBot/NetworkingBot.csproj --no-restore --no-build -o build/ -c Release /p:UseAppHost=false
@@ -57,3 +56,99 @@ jobs:
         run: |
           docker build -f NetworkingBot/Dockerfile build -t cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
           docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
+  deploy:
+    runs-on: ubuntu-latest
+    
+    needs: package
+    steps:
+      - name: Checkout the repository to the runner
+        uses: actions/checkout@v4
+        
+
+      - name: Set Working Dir
+        shell: bash
+        run: cd ./iac
+      
+      - name: Setup Tf Repos 
+        run: cat <<EOF >>~/.terraformrc
+          provider_installation {
+              network_mirror {
+              url = "https://terraform-mirror.yandexcloud.net/"
+              include = ["registry.terraform.io/*/*"]
+            }
+              direct {
+              exclude = ["registry.terraform.io/*/*"]
+            }
+          }
+          EOF
+      - name: Setup Tf State config
+        run: cat <<EOF >config.s3.tfbackend
+          access_key="$ACCESS_KEY"
+          secret_key="$SECRET_KEY"
+          EOF
+      
+      - name: Setup Tf Api Key
+        run: echo "$YC_KEY" > key.json
+              
+      
+      - name: Setup Terraform with specified version on the runner
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.8.5
+          
+      - name: Terraform init
+        id: init
+        run: terraform init -backend-config=config.s3.tfbackend    
+
+      - name: Terraform format
+        id: fmt
+        run: terraform fmt -check
+        
+      - name: Terraform validate
+        id: validate
+        run: terraform validate
+
+      - name: Set Version
+        if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
+        run: echo "BOT_VERSION=${GITHUB_REF#refs/tags/networking-bot-}" >> $GITHUB_ENV
+        
+      - name: Terraform plan
+        id: plan
+        if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
+        run: terraform plan -no-color -input=false -var="app_version=${{ env.BOT_VERSION }}" -out="planfile"
+        continue-on-error: true
+        
+      - uses: actions/github-script@v6
+        if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
+        env:
+          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+        with:
+          script: |
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            
+            <details><summary>Show Plan</summary>
+            
+            \`\`\`\n
+            ${process.env.PLAN}
+            \`\`\`
+            
+            </details>
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+            
+      - name: Terraform Plan Status
+        if: startsWith(github.event.ref, 'refs/tags/networking-bot-') && steps.plan.outcome == 'failure'
+        run: exit 1
+        
+      - name: Terraform Apply
+        if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
+        run: terraform apply -auto-approve -input=false "planfile"

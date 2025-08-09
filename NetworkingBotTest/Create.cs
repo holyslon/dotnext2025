@@ -130,7 +130,7 @@ internal static class Create
         {
             options.Vote(interest);
         }
-        await updateHandler.Update(poll: Create.Poll(updateHandler.Mock.Pool().LastPollId, options));
+        await updateHandler.Update(poll: Poll(updateHandler.Mock.Pool().LastPollId, options));
         return (user, chat);
     }
     
