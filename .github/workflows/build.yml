@@ -169,14 +169,15 @@ jobs:
         id: plan
         env:
           BOT_VERSION: ${{ env.BOT_VERSION }}
-        run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -out="planfile"
+        run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -out="./planfile"
         continue-on-error: true
 
       - name: Upload plan
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: 'true'
           name: networking-bot-planfile
-          path: planfile
+          path: ./iac/planfile
 
   apply-tf:
     runs-on: ubuntu-latest
@@ -223,7 +224,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: networking-bot-planfile
-          path: planfile
+          path: ./iac/planfile
 
       - name: Setup Terraform with specified version on the runner
         uses: hashicorp/setup-terraform@v2
