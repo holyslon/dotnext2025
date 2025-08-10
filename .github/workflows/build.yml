@@ -81,8 +81,8 @@ jobs:
       - name: Setup Tf State config
         run: |
           cat <<EOF >config.s3.tfbackend
-          access_key="$ACCESS_KEY"
-          secret_key="$SECRET_KEY"
+          access_key="${{ ACCESS_KEY }}"
+          secret_key="${{ SECRET_KEY }}"
           EOF
 
       - name: Setup Tf Api Key
@@ -135,8 +135,8 @@ jobs:
       - name: Setup Tf State config
         run:  |
           cat <<EOF >config.s3.tfbackend
-          access_key="$ACCESS_KEY"
-          secret_key="$SECRET_KEY"
+          access_key="${{ ACCESS_KEY }}"
+          secret_key="${{ SECRET_KEY }}"
           EOF
       
       - name: Setup Tf Api Key
@@ -224,8 +224,8 @@ jobs:
       - name: Setup Tf State config
         run:  |
           cat <<EOF >config.s3.tfbackend
-          access_key="$ACCESS_KEY"
-          secret_key="$SECRET_KEY"
+          access_key="${{ ACCESS_KEY }}"
+          secret_key="${{ SECRET_KEY }}"
           EOF
 
       - name: Setup Tf Api Key
