@@ -12,7 +12,7 @@ resource "yandex_container_repository_iam_binding" "image_puller" {
 }
 
 data "yandex_lockbox_secret_version" "bot_api_key_current" {
-  secret_id = data.yandex_lockbox_secret.bot_api_key.secret_id
+  secret_id  = data.yandex_lockbox_secret.bot_api_key.secret_id
   version_id = data.yandex_lockbox_secret.bot_api_key.current_version[0]["id"]
 }
 

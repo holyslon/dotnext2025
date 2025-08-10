@@ -48,17 +48,17 @@ data "yandex_resourcemanager_folder" "current" {
 }
 
 data "yandex_container_registry" "registry" {
-  registry_id        = "crpqhh1mlq02qggf1aj3"
-  folder_id = data.yandex_resourcemanager_folder.current.folder_id
+  registry_id = "crpqhh1mlq02qggf1aj3"
+  folder_id   = data.yandex_resourcemanager_folder.current.folder_id
 }
 
 data "yandex_vpc_network" "vpc" {
-  network_id        = "enptnu47bb7tjspdlt30"
-  folder_id = data.yandex_resourcemanager_folder.current.folder_id
+  network_id = "enptnu47bb7tjspdlt30"
+  folder_id  = data.yandex_resourcemanager_folder.current.folder_id
 }
 
 data "yandex_vpc_subnet" "subnet_a" {
-  subnet_id        = "e9b25td1ck5v22ikgfkp"
+  subnet_id = "e9b25td1ck5v22ikgfkp"
   folder_id = data.yandex_resourcemanager_folder.current.folder_id
 }
 
@@ -67,7 +67,7 @@ locals {
 }
 
 data "yandex_lockbox_secret" "bot_api_key" {
-  secret_id        = "e6qe2n3hceubn4mi842m"
+  secret_id = "e6qe2n3hceubn4mi842m"
   folder_id = data.yandex_resourcemanager_folder.current.folder_id
 }
 data "yandex_container_repository" "image" {
