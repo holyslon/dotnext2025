@@ -224,7 +224,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: networking-bot-planfile
-          path: ./iac/planfile
+          path: ./iac/plan
 
       - name: Setup Terraform with specified version on the runner
         uses: hashicorp/setup-terraform@v2
@@ -240,4 +240,4 @@ jobs:
 
       - name: Terraform apply
         id: plan
-        run: terraform apply -auto-approve "planfile"
+        run: terraform apply -auto-approve "./plan/planfile"
