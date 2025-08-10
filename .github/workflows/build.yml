@@ -58,6 +58,9 @@ jobs:
           docker push cr.yandex/$CR_REGISTRY/$CR_REPOSITORY:$IMAGE_TAG
   verify-tf:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./iac
     steps:
       - name: Checkout the repository to the runner
         uses: actions/checkout@v4
@@ -114,14 +117,12 @@ jobs:
     needs:
       - package
       - verify-tf
+    defaults: 
+      run: 
+        working-directory: ./iac
     steps:
       - name: Checkout the repository to the runner
         uses: actions/checkout@v4
-        
-
-      - name: Set Working Dir
-        shell: bash
-        run: cd ./iac
       
       - name: Setup Tf Repos 
         run: |
@@ -201,6 +202,9 @@ jobs:
 
   apply-tf:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./iac
     if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
     needs:
       - package
