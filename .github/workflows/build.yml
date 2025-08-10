@@ -143,8 +143,8 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run:  |
           cat <<EOF >config.s3.tfbackend
-          access_key="${{ ACCESS_KEY }}"
-          secret_key="${{ SECRET_KEY }}"
+          access_key="$ACCESS_KEY"
+          secret_key="$SECRET_KEY"
           EOF
       
       - name: Setup Tf Api Key
@@ -167,7 +167,9 @@ jobs:
         
       - name: Terraform plan
         id: plan
-        run: terraform plan -no-color -input=false -var="app_version=${{ env.BOT_VERSION }}" -out="planfile"
+        env:
+          BOT_VERSION: ${{ env.BOT_VERSION }}
+        run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -out="planfile"
         continue-on-error: true
         
       - uses: actions/github-script@v6
@@ -237,8 +239,8 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run:  |
           cat <<EOF >config.s3.tfbackend
-          access_key="${{ ACCESS_KEY }}"
-          secret_key="${{ SECRET_KEY }}"
+          access_key="$ACCESS_KEY"
+          secret_key="$SECRET_KEY"
           EOF
 
       - name: Setup Tf Api Key
