@@ -171,36 +171,7 @@ jobs:
           BOT_VERSION: ${{ env.BOT_VERSION }}
         run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -out="planfile"
         continue-on-error: true
-        
-      - uses: actions/github-script@v6
-        env:
-          PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
-        with:
-          script: |
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-            
-            <details><summary>Show Plan</summary>
-            
-            \`\`\`\n
-            ${process.env.PLAN}
-            \`\`\`
-            
-            </details>
-            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-            
-      - name: Terraform Plan Status
-        if: steps.plan.outcome == 'failure'
-        run: exit 1
+
       - name: Upload plan
         uses: actions/upload-artifact@v4
         with:
@@ -216,6 +187,7 @@ jobs:
     needs:
       - package
       - verify-tf
+      - plan-tf
     steps:
       - name: Checkout the repository to the runner
         uses: actions/checkout@v4
