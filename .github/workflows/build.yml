@@ -79,13 +79,18 @@ jobs:
           }
           EOF
       - name: Setup Tf State config
+        env:
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           cat <<EOF >config.s3.tfbackend
-          access_key="${{ ACCESS_KEY }}"
-          secret_key="${{ SECRET_KEY }}"
+          access_key="$ACCESS_KEY"
+          secret_key="$SECRET_KEY"
           EOF
 
       - name: Setup Tf Api Key
+        env:
+          YC_KEY: ${{ secrets.YC_KEY }}
         run: echo "$YC_KEY" > key.json
 
 
@@ -133,6 +138,9 @@ jobs:
           }
           EOF
       - name: Setup Tf State config
+        env:
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run:  |
           cat <<EOF >config.s3.tfbackend
           access_key="${{ ACCESS_KEY }}"
@@ -140,6 +148,8 @@ jobs:
           EOF
       
       - name: Setup Tf Api Key
+        env:
+          YC_KEY: ${{ secrets.YC_KEY }}
         run: echo "$YC_KEY" > key.json
               
       
@@ -222,6 +232,9 @@ jobs:
           }
           EOF
       - name: Setup Tf State config
+        env:
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run:  |
           cat <<EOF >config.s3.tfbackend
           access_key="${{ ACCESS_KEY }}"
@@ -229,6 +242,8 @@ jobs:
           EOF
 
       - name: Setup Tf Api Key
+        env:
+          YC_KEY: ${{ secrets.YC_KEY }}
         run: echo "$YC_KEY" > key.json
       
       - uses: actions/download-artifact@v4
