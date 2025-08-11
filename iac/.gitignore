@@ -6,3 +6,4 @@
 *secret.auto.tfvars.json
 *.pem
 plan
+planfile

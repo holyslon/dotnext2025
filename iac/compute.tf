@@ -11,11 +11,6 @@ resource "yandex_container_repository_iam_binding" "image_puller" {
   ]
 }
 
-data "yandex_lockbox_secret_version" "bot_api_key_current" {
-  secret_id  = data.yandex_lockbox_secret.bot_api_key.secret_id
-  version_id = data.yandex_lockbox_secret.bot_api_key.current_version[0]["id"]
-}
-
 locals {
   app_compose = {
     container_name = "server"
@@ -31,7 +26,7 @@ locals {
     }
     restart = "always"
     environment = {
-      Telegram__Token        = data.yandex_lockbox_secret_version.bot_api_key_current.entries[0]["text_value"]
+      Telegram__Token        = var.telegram_api_key
       ASPNETCORE_ENVIRONMENT = "Production"
       ASPNETCORE_URLS        = "http://0.0.0.0:80"
     }

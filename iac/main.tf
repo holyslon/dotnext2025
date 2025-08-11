@@ -20,8 +20,12 @@ terraform {
   }
 }
 
+variable "telegram_api_key" {
+  sensitive = true
+}
+
 variable "app_version" {
-  default = "0.1.0"
+  default = "0.1.5"
 }
 
 variable "folder_id" {
@@ -66,19 +70,7 @@ locals {
   version = var.app_version
 }
 
-data "yandex_lockbox_secret" "bot_api_key" {
-  secret_id = "e6qe2n3hceubn4mi842m"
-  folder_id = data.yandex_resourcemanager_folder.current.folder_id
-}
 data "yandex_container_repository" "image" {
   name = "${data.yandex_container_registry.registry.id}/networking-bot"
-}
-
-resource "yandex_vpc_address" "addr" {
-  name = "${local.prefix}-external-address"
-
-  external_ipv4_address {
-    zone_id = "ru-central1-a"
-  }
 }
 
