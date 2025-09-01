@@ -44,7 +44,6 @@ provider "yandex" {
   zone                     = "ru-central1-a"
   service_account_key_file = "key.json"
   folder_id                = local.folder_id
-
 }
 
 data "yandex_resourcemanager_folder" "current" {

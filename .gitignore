@@ -4,4 +4,7 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 build/
+pg_data/
+ydb_certs/
+.idea/
 *.local.json

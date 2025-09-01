@@ -5,7 +5,13 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+    services: 
+      postgres:
+        image: postgres:15-alpine
+        ports:
+          - 54321:5432
+        env:
+          POSTGRES_PASSWORD: example
     steps:
       - uses: actions/checkout@v4
       - name: Setup dotnet
@@ -170,7 +176,10 @@ jobs:
         env:
           BOT_VERSION: ${{ env.BOT_VERSION }}
           TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
-        run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -var="telegram_api_key=$TELEGRAM_API_KEY" -out="./planfile"
+        run: terraform plan -no-color -input=false\
+          -var="app_version=$BOT_VERSION"\
+          -var="telegram_api_key=$TELEGRAM_API_KEY"\
+          -out="./planfile"
         continue-on-error: true
 
       - name: Upload plan

@@ -21,5 +21,9 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+pg_data/
+ydb_certs/
+build/
+.idea/
 LICENSE
 README.md

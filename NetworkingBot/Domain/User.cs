@@ -2,121 +2,112 @@ using System.Collections.Immutable;
 
 namespace NetworkingBot.Domain;
 
-public class ConversationTopic(string name)
+public class ConversationTopic(string id, string name)
 {
     public string Name { get; } = name;
+    public string Id { get; } = id;
 }
 
-public class User(long chatId, long userId, string name)
+public interface IUserBackend
 {
+    bool IsActive { get; set; }
+    User.ParticipationMode ParticipationMode { get; set; }
+    bool ReadyToParticipate { get; set; }
+    long UserId { get; }
+    string Name { get; }
+    IReadOnlyCollection<ConversationTopic> Topics { get; }
+    long ChatId { get; }
+    void UpdateTopics(ImmutableArray<ConversationTopic> topics);
+    void CancelMeeting();
+    void MeetingCompleted();
+}
+
+public class User(IUserBackend storage)
+{
+    public IUserBackend Storage => storage;
     public enum ParticipationMode
     {
         Unknown,
         Online,
         Offline
     }
-    
-    private ParticipationMode _participationMode = ParticipationMode.Unknown;
-    private readonly List<ConversationTopic> _topics = [];
-    
-    private bool _isActive;
-    private bool _readyToParticipate;
-    private Meeting? _currentMeeting;
-    
+
     public void OptIn()
     {
-        _isActive = true;
+        storage.IsActive = true;
     }
 
     public void OptOut()
     {
-        _isActive = false;
-        _participationMode = ParticipationMode.Unknown;
-        _readyToParticipate = false;
+        storage.IsActive = false;
+        storage.ParticipationMode = ParticipationMode.Unknown;
+        storage.ReadyToParticipate = false;
     }
 
     public void OnlineParticipation()
     {
-        if (_isActive)
-        {
-            _participationMode = ParticipationMode.Online;
-        }
-    }
-    public void OfflineParticipation()
-    {
-        if (_isActive)
-        {
-            _participationMode = ParticipationMode.Offline;
-        }
+        if (storage.IsActive) storage.ParticipationMode = ParticipationMode.Online;
     }
 
-    public IReadOnlyCollection<ConversationTopic> AddConversationTopic(ConversationTopic topic)
+    public void OfflineParticipation()
     {
-        _topics.Add(topic);
-        return [.._topics];
+        if (storage.IsActive) storage.ParticipationMode = ParticipationMode.Offline;
     }
 
     public void ReadyToParticipate()
     {
-        _readyToParticipate = true;
+        storage.ReadyToParticipate = true;
     }
 
-    public record SearchInfo(long UserId, string Name, IReadOnlyCollection<ConversationTopic> Topics, ParticipationMode ParticipationMode)
+    public record SearchInfo(
+        long UserId,
+        string Name,
+        IReadOnlyCollection<ConversationTopic> Topics,
+        ParticipationMode ParticipationMode)
     {
         public static SearchInfo Empty => new(0, "", ImmutableList<ConversationTopic>.Empty, ParticipationMode.Unknown);
     };
 
     public bool TryGetSearchInfo(out SearchInfo searchInfo)
     {
-        if (_readyToParticipate)
+        if (storage.ReadyToParticipate)
         {
-            searchInfo = new SearchInfo(userId, name, [.._topics], _participationMode);
-            return true;
-        } 
-        searchInfo = SearchInfo.Empty;
-        return false;
-    }
-
-    public bool TryAddMeeting(Meeting meeting)
-    {
-        if (_isActive && _readyToParticipate && _currentMeeting == null)
-        {
-            _currentMeeting = meeting;
+            searchInfo = new SearchInfo(storage.UserId, storage.Name, storage.Topics, storage.ParticipationMode);
             return true;
         }
+
+        searchInfo = SearchInfo.Empty;
         return false;
     }
 
     public void MeetingCompleted()
     {
-        _currentMeeting = null;
+        storage.MeetingCompleted();
     }
 
     public void SetConversationTopics(ImmutableArray<ConversationTopic> topics)
     {
-        _topics.Clear();
-        _topics.AddRange(topics);
+        storage.UpdateTopics(topics);
     }
-    
+
     public record IdType(long ChatId, long UserId);
-    
-    public IdType Id => new(chatId, userId);
+
+    public IdType Id => new(storage.ChatId, storage.UserId);
 
     public record LinkData(long UserId, string Name);
 
-    public LinkData Link => new(userId, name);
+    public LinkData Link => new(storage.UserId, storage.Name);
 
     public void MeetingCanceled()
     {
-        _currentMeeting = null;
+        storage.CancelMeeting();
     }
-    
-    public bool CanBeInMatchResult => _isActive &&  _readyToParticipate;
+
+    public bool CanBeInMatchResult => storage is { IsActive: true, ReadyToParticipate: true };
 }
 
 public class Meeting(User one, User another)
 {
     public User One { get; } = one;
     public User Another { get; } = another;
-    
 };

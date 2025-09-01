@@ -63,7 +63,7 @@ resource "yandex_resourcemanager_folder_iam_member" "editor" {
   role   = "editor"
   member = "serviceAccount:${yandex_iam_service_account.compute_sa.id}"
 }
-resource "yandex_compute_instance_group" "signature_ig" {
+resource "yandex_compute_instance_group" "compute" {
   name               = "${local.prefix}-compute"
   service_account_id = yandex_iam_service_account.compute_sa.id
   instance_template {
@@ -89,9 +89,6 @@ resource "yandex_compute_instance_group" "signature_ig" {
       docker-compose     = yamlencode(local.compose)
       serial-port-enable = 1
     }
-  }
-  application_load_balancer {
-    target_group_name = "signature-compute-target-group"
   }
   scale_policy {
     fixed_scale {

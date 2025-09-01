@@ -7,14 +7,13 @@ namespace NetworkingBot.Infrastructure;
 
 public class UpdateHandler(ILogger<UpdateHandler> logger, IServiceProvider serviceProvider) : IUpdateHandler
 {
-    private Task HandleEvent<T>(ITelegramBotClient bot, T update, CancellationToken cancellationToken)
+    private async Task HandleEvent<T>(ITelegramBotClient bot, T update, CancellationToken cancellationToken)
     {
         using var _ = logger.BeginScope(new { UpdateType = typeof(T).Name });
-        using var scope = serviceProvider.CreateScope();
+        await using var scope = serviceProvider.CreateAsyncScope();
         var handler = scope.ServiceProvider.GetService<ITelegramEventHandler<T>>();
-        if (handler != null) return handler.OnEvent(bot, update, cancellationToken).AsTask();
+        if (handler != null) await handler.OnEvent(bot, update, cancellationToken).AsTask();
         logger.LogWarning("Handler for event not found");
-        return Task.CompletedTask;
     }
 
     public Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -42,8 +41,10 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, IServiceProvider servi
             UpdateType.RemovedChatBoost => HandleEvent(botClient, update.RemovedChatBoost!, cancellationToken),
             UpdateType.BusinessConnection => HandleEvent(botClient, update.BusinessConnection!, cancellationToken),
             UpdateType.BusinessMessage => HandleEvent(botClient, update.BusinessMessage!, cancellationToken),
-            UpdateType.EditedBusinessMessage => HandleEvent(botClient, update.EditedBusinessMessage!, cancellationToken),
-            UpdateType.DeletedBusinessMessages => HandleEvent(botClient, update.DeletedBusinessMessages!, cancellationToken),
+            UpdateType.EditedBusinessMessage =>
+                HandleEvent(botClient, update.EditedBusinessMessage!, cancellationToken),
+            UpdateType.DeletedBusinessMessages => HandleEvent(botClient, update.DeletedBusinessMessages!,
+                cancellationToken),
             UpdateType.PurchasedPaidMedia => HandleEvent(botClient, update.PurchasedPaidMedia!, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(update.Type))
         };

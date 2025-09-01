@@ -9,12 +9,13 @@ internal static class Create
 {
     private static readonly Random Random = new();
     private static readonly RealNameGenerator Generator = new();
+
     internal static User User(long id = Default.UserId, string username = Default.Username, bool newUser = false)
     {
         return new User
         {
-            Id = newUser ? Random.NextInt64() :id,
-            Username = newUser? Generator.Generate() : username,
+            Id = newUser ? Random.NextInt64() : id,
+            Username = newUser ? Generator.Generate() : username
         };
     }
 
@@ -22,7 +23,7 @@ internal static class Create
     {
         return new Chat
         {
-            Id = newChat? Random.NextInt64() :id
+            Id = newChat ? Random.NextInt64() : id
         };
     }
 
@@ -59,34 +60,21 @@ internal static class Create
 
     internal static PollAnswer PollAnswer()
     {
-        return new PollAnswer()
+        return new PollAnswer
         {
-
         };
     }
-    
+
     internal static Update Update(Message? message = null, CallbackQuery? callback = null, Poll? poll = null,
         PollAnswer? pollAnswer = null)
     {
         var update = new Update();
-        if (message != null)
-        {
-            update.Message = message;
-        }
+        if (message != null) update.Message = message;
 
-        if (callback != null)
-        {
-            update.CallbackQuery = callback;
-        }
+        if (callback != null) update.CallbackQuery = callback;
 
-        if (pollAnswer != null)
-        {
-            update.PollAnswer = pollAnswer;
-        }
-        if (poll != null)
-        {
-            update.Poll = poll;
-        }
+        if (pollAnswer != null) update.PollAnswer = pollAnswer;
+        if (poll != null) update.Poll = poll;
         return update;
     }
 
@@ -103,12 +91,9 @@ internal static class Create
     internal static PollOption[] Vote(this PollOption[] options, string optionText, int votes = 1)
     {
         foreach (var option in options)
-        {
             if (optionText.Equals(option.Text, StringComparison.InvariantCulture))
-            {
                 option.VoterCount += votes;
-            }
-        }
+
         return options;
     }
 
@@ -117,33 +102,32 @@ internal static class Create
     {
         return new NetworkingBot.Domain.User.LinkData(user.Id, user.Username ?? user.FirstName);
     }
-    
-    internal static async ValueTask<(User, Chat)> OnlineUser(this UpdateHandlerAndBot updateHandler, params string[] interests)
+
+    internal static async ValueTask<(User, Chat)> OnlineUser(this UpdateHandlerAndBot updateHandler,
+        params string[] interests)
     {
         var user = User(newUser: true);
         var chat = Chat(newChat: true);
-        await updateHandler.Update(message: Message("/start", user: user, chat: chat));
-        await updateHandler.Update(callback: Commands.Join.CallbackQuery(chat: chat));
-        await updateHandler.Update(callback: Commands.Offline.CallbackQuery(chat: chat));
+        await updateHandler.Update(Message("/start", user: user, chat: chat));
+        await updateHandler.Update(callback: Commands.Join.CallbackQuery(chat));
+        await updateHandler.Update(callback: Commands.Offline.CallbackQuery(chat));
         var options = updateHandler.Mock.Pool().LastPollOption;
-        foreach (var interest in interests)
-        {
-            options.Vote(interest);
-        }
+        foreach (var interest in interests) options.Vote(interest);
         await updateHandler.Update(poll: Poll(updateHandler.Mock.Pool().LastPollId, options));
         return (user, chat);
     }
-    
-    internal static async Task Update(this UpdateHandlerAndBot updateHandler, Message? message = null, CallbackQuery? callback = null, Poll? poll = null)
+
+    internal static async Task Update(this UpdateHandlerAndBot updateHandler, Message? message = null,
+        CallbackQuery? callback = null, Poll? poll = null)
     {
         await updateHandler.HandleUpdateAsync(Update(message, callback, poll));
-    } 
-    
+    }
+
     internal static async Task<(Chat Chat, User User)> RegisteredUser(this UpdateHandlerAndBot updateHandler)
     {
         var chat = Chat(newChat: true);
         var user = User(newUser: true);
-        await updateHandler.Update(message: Message("/start", chat, user));
+        await updateHandler.Update(Message("/start", chat, user));
         await updateHandler.Update(callback: CallbackQuery("yes".ForChat(chat)));
         return (chat, user);
     }

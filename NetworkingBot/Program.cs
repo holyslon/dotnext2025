@@ -1,9 +1,12 @@
+using System.Runtime.CompilerServices;
 using NetworkingBot;
 using NetworkingBot.Infrastructure;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+
+[assembly:InternalsVisibleTo("NetworkingBotTest")]
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,10 @@ builder.Configuration
     .AddJsonFile($"appsettings.{profile}.json", true, false)
     .AddEnvironmentVariables("NETWORKINGBOT_")
     .AddCommandLine(args);
+
+
+var ydbConnectionString = builder.Configuration.GetConnectionString("YDB");
+var pgConnectionString = builder.Configuration.GetConnectionString("PG");
 
 var serviceName = "NetworkingBot";
 builder.Logging.AddOpenTelemetry((options) =>
@@ -34,7 +41,7 @@ builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection("Te
 builder.Services.AddSingleton<TelegramBot>();
 builder.Services.AddHostedService<TelegramHostedService>();
 
-builder.Services.AddNetworkingBot();
+builder.Services.AddNetworkingBot(pgConnectionString!);
 
 // Add services to the container.
 

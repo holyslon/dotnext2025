@@ -19,10 +19,7 @@ internal class BotMock : ITelegramBotClient
     public Task<TResponse> SendRequest<TResponse>(IRequest<TResponse> request,
         CancellationToken cancellationToken = new())
     {
-        if (_sendPoolAssert.TryHandleRequest(request, out var response))
-        {
-            return Task.FromResult(response);
-        }
+        if (_sendPoolAssert.TryHandleRequest(request, out var response)) return Task.FromResult(response);
         _requests.Add(request);
         return Task.FromResult((TResponse)default!);
     }
@@ -48,8 +45,8 @@ internal class BotMock : ITelegramBotClient
     public IExceptionParser ExceptionsParser { get; set; } = new DefaultExceptionParser();
     public event AsyncEventHandler<ApiRequestEventArgs>? OnMakingApiRequest;
     public event AsyncEventHandler<ApiResponseEventArgs>? OnApiResponseReceived;
-    
-    
+
+
     public class SendPoolAssert
     {
         private readonly List<SendPollRequest> _requests = [];
@@ -72,7 +69,8 @@ internal class BotMock : ITelegramBotClient
             if (request is not SendPollRequest sendPollRequest || typeof(TResponse) != typeof(Message)) return false;
             _requests.Add(sendPollRequest);
             LastPollId = Guid.NewGuid().ToString();
-            LastPollOption = sendPollRequest.Options.Select(o=>new PollOption {Text = o.Text, VoterCount = 0}).ToArray();
+            LastPollOption = sendPollRequest.Options.Select(o => new PollOption { Text = o.Text, VoterCount = 0 })
+                .ToArray();
             var message = new Message
             {
                 Chat = new Chat
@@ -84,56 +82,42 @@ internal class BotMock : ITelegramBotClient
                 {
                     Id = LastPollId,
                     Type = PollType.Regular,
-                    Options = LastPollOption,
-                },
+                    Options = LastPollOption
+                }
             };
             var gResponse = JsonSerializer.Serialize(message);
             response = JsonSerializer.Deserialize<TResponse>(gResponse)!;
             return true;
         }
-        
+
         public void WasSend()
         {
             Assert.Contains(_requests, req =>
             {
-                if (_chatId != null && req.ChatId != _chatId)
-                {
-                    return false;
-                }
+                if (_chatId != null && req.ChatId != _chatId) return false;
 
                 if (_question != null && !req.Question.Equals(_question, StringComparison.InvariantCulture))
-                {
                     return false;
-                }
 
                 if (!_options.All(inputPollOption =>
                         req.Options.Any(o =>
                             o.Text.Equals(inputPollOption.Text, StringComparison.InvariantCulture))))
-                {
                     return false;
-                }
-                    
+
                 foreach (var inlineCallbackButton in _inlineKeyboardButtons)
-                {
                     if (req.ReplyMarkup is InlineKeyboardMarkup inlineKeyboardMarkup)
                     {
-                        var data = inlineKeyboardMarkup.InlineKeyboard.SelectMany(s=>s).ToArray();
-                        var found = data.
-                            Where(button => button.Text == inlineCallbackButton.Text).
-                            Any(button => button.CallbackData == inlineCallbackButton.CallbackData);
-                        if (!found)
-                        {
-                            return false;
-                        }
+                        var data = inlineKeyboardMarkup.InlineKeyboard.SelectMany(s => s).ToArray();
+                        var found = data.Where(button => button.Text == inlineCallbackButton.Text).Any(button =>
+                            button.CallbackData == inlineCallbackButton.CallbackData);
+                        if (!found) return false;
                     }
                     else
                     {
                         return false;
                     }
-                }
-                    
-                return true;
 
+                return true;
             });
         }
 
@@ -148,6 +132,7 @@ internal class BotMock : ITelegramBotClient
             _options.Add(new InputPollOption(option));
             return this;
         }
+
         public SendPoolAssert WithInlineButton(IInlineCommand command, Chat? chat = null)
         {
             chat ??= Create.Chat();
@@ -155,13 +140,14 @@ internal class BotMock : ITelegramBotClient
             _inlineKeyboardButtons.Add(button);
             return this;
         }
+
         public SendPoolAssert WithInlineButton(InlineKeyboardButton inlineButton)
         {
             _inlineKeyboardButtons.Add(inlineButton);
             return this;
         }
     }
-    
+
     public class SendMessageRequestAssert(BotMock botMock)
     {
         private long? _chatId;
@@ -174,6 +160,7 @@ internal class BotMock : ITelegramBotClient
             _chatId = chatId;
             return this;
         }
+
         public SendMessageRequestAssert ForChat(Chat chat)
         {
             _chatId = chat.Id;
@@ -191,7 +178,7 @@ internal class BotMock : ITelegramBotClient
             _inlineCallbackButtons.Add((text, callback));
             return this;
         }
-        
+
         public SendMessageRequestAssert WithInlineCallback(IInlineCommand command, Chat? chat = null)
         {
             chat ??= Create.Chat();
@@ -199,57 +186,45 @@ internal class BotMock : ITelegramBotClient
             _inlineCallbackButtons.Add((button.Text, button.CallbackData!));
             return this;
         }
+
         public SendMessageRequestAssert WithParseMode(ParseMode mode)
         {
             _parseMode = mode;
             return this;
         }
-        
+
         public void WasSend()
         {
             Assert.Contains(botMock._requests, MatchRequest);
         }
+
         public void WasNotSend()
         {
             Assert.DoesNotContain(botMock._requests, MatchRequest);
         }
+
         private bool MatchRequest(object req)
         {
             if (req is SendMessageRequest sendMessageRequest)
             {
-                if (_chatId != null && sendMessageRequest.ChatId != _chatId)
-                {
-                    return false;
-                }
+                if (_chatId != null && sendMessageRequest.ChatId != _chatId) return false;
 
-                if (_text != null && sendMessageRequest.Text != _text)
-                {
-                    return false;
-                }
+                if (_text != null && sendMessageRequest.Text != _text) return false;
 
-                if (_parseMode.HasValue && _parseMode.Value != sendMessageRequest.ParseMode)
-                {
-                    return false;
-                }
+                if (_parseMode.HasValue && _parseMode.Value != sendMessageRequest.ParseMode) return false;
                 foreach (var inlineCallbackButton in _inlineCallbackButtons)
-                {
                     if (sendMessageRequest.ReplyMarkup is InlineKeyboardMarkup inlineKeyboardMarkup)
                     {
-                        var data = inlineKeyboardMarkup.InlineKeyboard.SelectMany(s=>s).ToArray();
-                        var found = data.
-                            Where(button => button.Text == inlineCallbackButton.text).
-                            Any(button => button.CallbackData == inlineCallbackButton.callback);
-                        if (!found)
-                        {
-                            return false;
-                        }
+                        var data = inlineKeyboardMarkup.InlineKeyboard.SelectMany(s => s).ToArray();
+                        var found = data.Where(button => button.Text == inlineCallbackButton.text)
+                            .Any(button => button.CallbackData == inlineCallbackButton.callback);
+                        if (!found) return false;
                     }
                     else
                     {
                         return false;
                     }
-                }
-                    
+
                 return true;
             }
 
@@ -257,7 +232,13 @@ internal class BotMock : ITelegramBotClient
         }
     }
 
-    public SendMessageRequestAssert Message() => new(this);
+    public SendMessageRequestAssert Message()
+    {
+        return new SendMessageRequestAssert(this);
+    }
 
-    public SendPoolAssert Pool() => _sendPoolAssert;
+    public SendPoolAssert Pool()
+    {
+        return _sendPoolAssert;
+    }
 }
