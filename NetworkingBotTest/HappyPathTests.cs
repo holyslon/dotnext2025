@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NetworkingBot;
@@ -11,7 +10,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Telegram.Bot.Polling;
-using Xunit.Abstractions;
 
 namespace NetworkBotTest;
 
@@ -29,6 +27,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WithLogging(opts => opts.AddConsoleExporter(op => op.Targets = ConsoleExporterOutputTargets.Debug))
             .WithMetrics(opts => opts.AddConsoleExporter(op => op.Targets = ConsoleExporterOutputTargets.Debug))
             .WithTracing(opts => opts.AddConsoleExporter(op => op.Targets = ConsoleExporterOutputTargets.Debug));
+        BotClient = new BotMock(output);
         _serviceProvider = networkingBot
             .BuildServiceProvider();
         using var serviceScope = _serviceProvider.CreateScope();
@@ -39,7 +38,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
     // private IUpdateHandler UpdateHandler => _serviceProvider.GetRequiredService<IUpdateHandler>();
     // private IMatchmakingService MatchmakingService => _serviceProvider.GetRequiredService<IMatchmakingService>();
-    private BotMock BotClient { get; } = new();
+    private BotMock BotClient { get; }
 
 
     [Fact]

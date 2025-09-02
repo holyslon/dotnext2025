@@ -11,10 +11,10 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace NetworkBotTest;
 
-internal class BotMock : ITelegramBotClient
+internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
 {
     private readonly List<object> _requests = [];
-    private readonly SendPoolAssert _sendPoolAssert = new();
+    private readonly SendPoolAssert _sendPoolAssert = new(output);
 
     public Task<TResponse> SendRequest<TResponse>(IRequest<TResponse> request,
         CancellationToken cancellationToken = new())
@@ -46,8 +46,53 @@ internal class BotMock : ITelegramBotClient
     public event AsyncEventHandler<ApiRequestEventArgs>? OnMakingApiRequest;
     public event AsyncEventHandler<ApiResponseEventArgs>? OnApiResponseReceived;
 
+    
+    
+    private static string FormatRequest(object? request)
+    {
+        string MapIO(InputPollOption option)
+        {
+            return $"{{Text: '{option.Text}'}}";
+        }
+        string MapRM(ReplyMarkup? markup)
+        {
+            if (markup == null)
+            {
+                return "null";
+            }
 
-    public class SendPoolAssert
+            if (markup is InlineKeyboardMarkup inlineKeyboard)
+            {
+                return $"[{string.Join(", ", inlineKeyboard.InlineKeyboard.SelectMany(s=>s).Select(ik=>$"{{Text: '{ik.Text}', CallbackData: '{ik.CallbackData}'}}"))}]";
+            }
+            if (markup is ReplyKeyboardMarkup replyKeyboardMarkup)
+            {
+                return $"[{string.Join(", ", replyKeyboardMarkup.Keyboard.SelectMany(s=>s).Select(ik=>$"{{Text: '{ik.Text}'}}"))}]";
+            }
+            return "Unknown markup";
+        }
+
+        if (request == null)
+        {
+            return "null";
+        }
+        
+        if (request is SendPollRequest sendPollRequest)
+        {
+            return
+                $"Chat:'{sendPollRequest.ChatId}', Question: '{sendPollRequest.Question}', Options: [{string.Join(", ", sendPollRequest.Options.Select(MapIO))}], ReplyMarkup: {MapRM(sendPollRequest.ReplyMarkup)}]";
+        }
+
+        if (request is SendMessageRequest sendMessageRequest)
+        {
+            return
+                $"Chat: '{sendMessageRequest.ChatId}', Text: '{sendMessageRequest.Text}', ParseMode: '{sendMessageRequest.ParseMode}', ReplyMarkup: {MapRM(sendMessageRequest.ReplyMarkup)}]";
+            
+        }
+        return request.ToString()!;
+    }
+
+    public class SendPoolAssert(ITestOutputHelper output)
     {
         private readonly List<SendPollRequest> _requests = [];
         private long? _chatId;
@@ -94,15 +139,25 @@ internal class BotMock : ITelegramBotClient
         {
             Assert.Contains(_requests, req =>
             {
-                if (_chatId != null && req.ChatId != _chatId) return false;
+                if (_chatId != null && req.ChatId != _chatId)
+                {
+                    output.WriteLine($"Chat not match '{_chatId}', {FormatRequest(req)}");
+                    return false;
+                }
 
                 if (_question != null && !req.Question.Equals(_question, StringComparison.InvariantCulture))
+                {
+                    output.WriteLine($"Question not match '{_question}', {FormatRequest(req)}");
                     return false;
+                }
 
                 if (!_options.All(inputPollOption =>
                         req.Options.Any(o =>
                             o.Text.Equals(inputPollOption.Text, StringComparison.InvariantCulture))))
+                {
+                    output.WriteLine($"Options not match [{string.Join(", ", _options.Select(opt => $"{{Text:'{opt.Text}'}}"))}], {FormatRequest(req)}");
                     return false;
+                }
 
                 foreach (var inlineCallbackButton in _inlineKeyboardButtons)
                     if (req.ReplyMarkup is InlineKeyboardMarkup inlineKeyboardMarkup)
@@ -110,10 +165,15 @@ internal class BotMock : ITelegramBotClient
                         var data = inlineKeyboardMarkup.InlineKeyboard.SelectMany(s => s).ToArray();
                         var found = data.Where(button => button.Text == inlineCallbackButton.Text).Any(button =>
                             button.CallbackData == inlineCallbackButton.CallbackData);
-                        if (!found) return false;
+                        if (!found)
+                        {
+                            output.WriteLine($"InlineKeyboardMarkup not match {{Text: '{inlineCallbackButton.Text}', CallbackData: '{inlineCallbackButton.CallbackData}'}}, {FormatRequest(req)}");
+                            return false;
+                        }
                     }
                     else
                     {
+                        output.WriteLine($"Not InlineKeyboardMarkup {FormatRequest(req)}");
                         return false;
                     }
 
@@ -148,7 +208,7 @@ internal class BotMock : ITelegramBotClient
         }
     }
 
-    public class SendMessageRequestAssert(BotMock botMock)
+    public class SendMessageRequestAssert(BotMock botMock, ITestOutputHelper output)
     {
         private long? _chatId;
         private string? _text;
@@ -207,21 +267,38 @@ internal class BotMock : ITelegramBotClient
         {
             if (req is SendMessageRequest sendMessageRequest)
             {
-                if (_chatId != null && sendMessageRequest.ChatId != _chatId) return false;
+                if (_chatId != null && sendMessageRequest.ChatId != _chatId)
+                {
+                    output.WriteLine($"Chat not match '{_chatId}', {FormatRequest(req)}");
+                    return false;
+                }
 
-                if (_text != null && sendMessageRequest.Text != _text) return false;
+                if (_text != null && sendMessageRequest.Text != _text)
+                {
+                    output.WriteLine($"Text not match '{_text}', {FormatRequest(req)}");
+                    return false;
+                }
 
-                if (_parseMode.HasValue && _parseMode.Value != sendMessageRequest.ParseMode) return false;
+                if (_parseMode.HasValue && _parseMode.Value != sendMessageRequest.ParseMode)
+                {
+                    output.WriteLine($"ParseMode not match '{_parseMode.Value}', {FormatRequest(req)}");
+                    return false;
+                }
                 foreach (var inlineCallbackButton in _inlineCallbackButtons)
                     if (sendMessageRequest.ReplyMarkup is InlineKeyboardMarkup inlineKeyboardMarkup)
                     {
                         var data = inlineKeyboardMarkup.InlineKeyboard.SelectMany(s => s).ToArray();
                         var found = data.Where(button => button.Text == inlineCallbackButton.text)
                             .Any(button => button.CallbackData == inlineCallbackButton.callback);
-                        if (!found) return false;
+                        if (!found)
+                        {
+                            output.WriteLine($"InlineKeyboardMarkup not match {{Text: '{inlineCallbackButton.text}', CallbackData: '{inlineCallbackButton.callback}'}}, {FormatRequest(req)}");
+                            return false;
+                        }
                     }
                     else
                     {
+                        output.WriteLine($"Not InlineKeyboardMarkup {FormatRequest(req)}");
                         return false;
                     }
 
@@ -234,7 +311,7 @@ internal class BotMock : ITelegramBotClient
 
     public SendMessageRequestAssert Message()
     {
-        return new SendMessageRequestAssert(this);
+        return new SendMessageRequestAssert(this, output);
     }
 
     public SendPoolAssert Pool()
