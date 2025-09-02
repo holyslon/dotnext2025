@@ -11,9 +11,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8"/>
-        <PackageReference Include="EntityFrameworkCore.Ydb" Version="0.0.2"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.8">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.1">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
@@ -24,8 +23,6 @@
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0"/>
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0"/>
         <PackageReference Include="Telegram.Bot" Version="22.5.1"/>
-        <PackageReference Include="Ydb.Sdk" Version="0.22.0"/>
-        <PackageReference Include="Ydb.Sdk.Yc.Auth" Version="0.2.0"/>
 
         <Content Include="..\.dockerignore">
             <Link>.dockerignore</Link>

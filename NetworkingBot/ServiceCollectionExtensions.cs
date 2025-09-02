@@ -1,4 +1,4 @@
-using EntityFrameworkCore.Ydb.Extensions;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NetworkingBot.Handlers;
@@ -6,14 +6,13 @@ using NetworkingBot.Infrastructure;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
-using Ydb.Sdk.Auth;
+
 
 namespace NetworkingBot;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddNetworkingBot(this IServiceCollection services, string connectionString,
-        ICredentialsProvider? credentialsProvider = null)
+    public static IServiceCollection AddNetworkingBot(this IServiceCollection services, string connectionString)
     {
         services.AddSingleton<IUpdateHandler, UpdateHandler>();
         services.AddTelegramEventHandlers<Message>(opts =>
@@ -49,7 +48,13 @@ public static class ServiceCollectionExtensions
         //         opt.WithCredentialsProvider(credentialsProvider);
         //     });
         // });
-        services.AddDbContext<ApplicationDbContext>(op=>op.UseNpgsql(connectionString));
+        services.AddDbContext<ApplicationDbContext>(op=>
+        {
+            op.UseNpgsql(connectionString, opt =>
+            {
+                opt.MigrationsAssembly(typeof(ApplicationDbContext).Assembly);
+            });
+        });
         services.AddHostedService<MigrationService>();
 
         return services;

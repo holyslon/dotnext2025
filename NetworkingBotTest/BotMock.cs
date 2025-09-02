@@ -11,7 +11,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace NetworkBotTest;
 
-internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
+public class BotMock(ITestOutputHelper output) : ITelegramBotClient, IClassFixture<MigrateDbFixture>
 {
     private readonly List<object> _requests = [];
     private readonly SendPoolAssert _sendPoolAssert = new(output);

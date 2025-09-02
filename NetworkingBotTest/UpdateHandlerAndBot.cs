@@ -3,7 +3,7 @@ using Telegram.Bot.Types;
 
 namespace NetworkBotTest;
 
-internal class UpdateHandlerAndBot(IUpdateHandler updateHandler, BotMock botMock)
+public class UpdateHandlerAndBot(IUpdateHandler updateHandler, BotMock botMock)
 {
     public BotMock Mock { get; } = botMock;
 

@@ -8,3 +8,4 @@ pg_data/
 ydb_certs/
 .idea/
 *.local.json
+TestResults/
