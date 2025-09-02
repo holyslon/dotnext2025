@@ -390,6 +390,12 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             return (false, null);
         }
 
+        if (user.State != 3)
+        {
+            logger.LogWarning("User not ready to participate");
+            return (false, null);
+        }
+
         var targetParticipation = searchInfo.ParticipationMode switch
         {
             User.ParticipationMode.Unknown => (false, 0),
@@ -423,13 +429,24 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
                 };
 
 
-        var candidates =
-            from u in Users
-            from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
-            where !inMeetings.Contains(u.Id) && u.Id != user.Id
-            orderby s.Status
-            select u;
-        
+        IQueryable<DbUser> candidates;
+        if (targetParticipation.Item1)
+        {
+            candidates = from u in Users
+                from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
+                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.ParticipationMode == targetParticipation.Item2
+                orderby s.Status
+                select u;
+        }
+        else
+        {
+            candidates = from u in Users
+                from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
+                where !inMeetings.Contains(u.Id) && u.Id != user.Id
+                orderby s.Status
+                select u;
+        }
+
         var candidate = candidates.FirstOrDefault();
         if (candidate == null)
         {

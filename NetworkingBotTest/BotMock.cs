@@ -80,13 +80,13 @@ internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
         if (request is SendPollRequest sendPollRequest)
         {
             return
-                $"Chat:'{sendPollRequest.ChatId}', Question: '{sendPollRequest.Question}', Options: [{string.Join(", ", sendPollRequest.Options.Select(MapIO))}], ReplyMarkup: {MapRM(sendPollRequest.ReplyMarkup)}]";
+                $"Chat:'{sendPollRequest.ChatId}'\n Question: '{sendPollRequest.Question}'\n Options: [{string.Join("\n\t", sendPollRequest.Options.Select(MapIO))}]\n ReplyMarkup: {MapRM(sendPollRequest.ReplyMarkup)}]\n";
         }
 
         if (request is SendMessageRequest sendMessageRequest)
         {
             return
-                $"Chat: '{sendMessageRequest.ChatId}', Text: '{sendMessageRequest.Text}', ParseMode: '{sendMessageRequest.ParseMode}', ReplyMarkup: {MapRM(sendMessageRequest.ReplyMarkup)}]";
+                $"Chat: '{sendMessageRequest.ChatId}'\n Text: '{sendMessageRequest.Text}'\n ParseMode: '{sendMessageRequest.ParseMode}'\n ReplyMarkup: {MapRM(sendMessageRequest.ReplyMarkup)}]\n";
             
         }
         return request.ToString()!;
@@ -141,13 +141,18 @@ internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
             {
                 if (_chatId != null && req.ChatId != _chatId)
                 {
-                    output.WriteLine($"Chat not match '{_chatId}', {FormatRequest(req)}");
+                    output.WriteLine("");
+                    output.WriteLine($"Chat not match '{_chatId}', '{req.ChatId}'");
+                    output.Write(FormatRequest(req));
                     return false;
                 }
 
                 if (_question != null && !req.Question.Equals(_question, StringComparison.InvariantCulture))
                 {
-                    output.WriteLine($"Question not match '{_question}', {FormatRequest(req)}");
+                    output.WriteLine("");
+                    output.WriteLine($"Question not match '{_question}'");
+                    output.WriteLine($"                   '{req.Question}'");
+                    output.Write(FormatRequest(req));
                     return false;
                 }
 
@@ -155,7 +160,10 @@ internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
                         req.Options.Any(o =>
                             o.Text.Equals(inputPollOption.Text, StringComparison.InvariantCulture))))
                 {
-                    output.WriteLine($"Options not match [{string.Join(", ", _options.Select(opt => $"{{Text:'{opt.Text}'}}"))}], {FormatRequest(req)}");
+                    output.WriteLine("");
+                    output.WriteLine($"Options not match [{string.Join(", ", _options.Select(opt => $"{{Text:'{opt.Text}'}}"))}]");
+                    output.WriteLine($"                  [{string.Join(", ", req.Options.Select(opt => $"{{Text:'{opt.Text}'}}"))}]");
+                    output.Write(FormatRequest(req));
                     return false;
                 }
 
@@ -167,13 +175,21 @@ internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
                             button.CallbackData == inlineCallbackButton.CallbackData);
                         if (!found)
                         {
-                            output.WriteLine($"InlineKeyboardMarkup not match {{Text: '{inlineCallbackButton.Text}', CallbackData: '{inlineCallbackButton.CallbackData}'}}, {FormatRequest(req)}");
+                            output.WriteLine("");
+                            output.WriteLine($"InlineKeyboardMarkup not match {{Text: '{inlineCallbackButton.Text}', CallbackData: '{inlineCallbackButton.CallbackData}'}}");
+                            foreach (var inlineKeyboardButton in data)
+                            { 
+                                output.WriteLine($"                               {{Text: '{inlineKeyboardButton.Text}', CallbackData: '{inlineKeyboardButton.CallbackData}'}}");
+                            }
+                            output.Write(FormatRequest(req));
                             return false;
                         }
                     }
                     else
                     {
-                        output.WriteLine($"Not InlineKeyboardMarkup {FormatRequest(req)}");
+                        output.WriteLine("");
+                        output.WriteLine($"Not InlineKeyboardMarkup");
+                        output.Write(FormatRequest(req));
                         return false;
                     }
 
@@ -269,19 +285,28 @@ internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
             {
                 if (_chatId != null && sendMessageRequest.ChatId != _chatId)
                 {
-                    output.WriteLine($"Chat not match '{_chatId}', {FormatRequest(req)}");
+                    output.WriteLine("");
+                    output.WriteLine($"Chat not match '{_chatId}'");
+                    output.WriteLine($"               '{sendMessageRequest.ChatId}'");
+                    output.Write(FormatRequest(req));
                     return false;
                 }
 
                 if (_text != null && sendMessageRequest.Text != _text)
                 {
-                    output.WriteLine($"Text not match '{_text}', {FormatRequest(req)}");
+                    output.WriteLine("");
+                    output.WriteLine($"Text not match '{_text}'");
+                    output.WriteLine($"               '{sendMessageRequest.Text}'");
+                    output.Write(FormatRequest(req));
                     return false;
                 }
 
                 if (_parseMode.HasValue && _parseMode.Value != sendMessageRequest.ParseMode)
                 {
-                    output.WriteLine($"ParseMode not match '{_parseMode.Value}', {FormatRequest(req)}");
+                    output.WriteLine("");
+                    output.WriteLine($"ParseMode not match '{_parseMode.Value}'");
+                    output.WriteLine($"                    '{sendMessageRequest.ParseMode}'");
+                    output.Write(FormatRequest(req));
                     return false;
                 }
                 foreach (var inlineCallbackButton in _inlineCallbackButtons)
@@ -292,16 +317,27 @@ internal class BotMock(ITestOutputHelper output) : ITelegramBotClient
                             .Any(button => button.CallbackData == inlineCallbackButton.callback);
                         if (!found)
                         {
-                            output.WriteLine($"InlineKeyboardMarkup not match {{Text: '{inlineCallbackButton.text}', CallbackData: '{inlineCallbackButton.callback}'}}, {FormatRequest(req)}");
+                            output.WriteLine("");
+                            output.WriteLine($"InlineKeyboardMarkup not match {{Text: '{inlineCallbackButton.text}', CallbackData: '{inlineCallbackButton.callback}'}}");
+                            foreach (var inlineKeyboardButton in data)
+                            { 
+                                output.WriteLine($"                               {{Text: '{inlineKeyboardButton.Text}', CallbackData: '{inlineKeyboardButton.CallbackData}'}}");
+                            }
+                            output.Write(FormatRequest(req));
                             return false;
                         }
                     }
                     else
                     {
-                        output.WriteLine($"Not InlineKeyboardMarkup {FormatRequest(req)}");
+                        output.WriteLine("");
+                        output.WriteLine($"Not InlineKeyboardMarkup");
+                        output.Write(FormatRequest(req));
                         return false;
                     }
 
+                output.WriteLine("");
+                output.WriteLine($"Match");
+                output.Write(FormatRequest(req));
                 return true;
             }
 

@@ -110,6 +110,20 @@ internal static class Create
         var chat = Chat(newChat: true);
         await updateHandler.Update(Message("/start", user: user, chat: chat));
         await updateHandler.Update(callback: Commands.Join.CallbackQuery(chat));
+        await updateHandler.Update(callback: Commands.Online.CallbackQuery(chat));
+        var options = updateHandler.Mock.Pool().LastPollOption;
+        foreach (var interest in interests) options.Vote(interest);
+        await updateHandler.Update(poll: Poll(updateHandler.Mock.Pool().LastPollId, options));
+        return (user, chat);
+    }
+    
+    internal static async ValueTask<(User, Chat)> OfflineUser(this UpdateHandlerAndBot updateHandler,
+        params string[] interests)
+    {
+        var user = User(newUser: true);
+        var chat = Chat(newChat: true);
+        await updateHandler.Update(Message("/start", user: user, chat: chat));
+        await updateHandler.Update(callback: Commands.Join.CallbackQuery(chat));
         await updateHandler.Update(callback: Commands.Offline.CallbackQuery(chat));
         var options = updateHandler.Mock.Pool().LastPollOption;
         foreach (var interest in interests) options.Vote(interest);

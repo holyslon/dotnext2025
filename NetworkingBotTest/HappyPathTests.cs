@@ -239,6 +239,58 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WithInlineCallback(Commands.MeetingCanceledCommand, secondChat)
             .WasNotSend();
     }
+    
+    [Fact]
+    public async Task TestThatMatchPriorityIsForUsersThatWeDontHavePreviousMatches()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+        await UpdateHandler.Update(callback: Commands.MeetingHappenCommand.CallbackQuery(firstChat));
+
+        var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, firstChat)
+            .WasSend();
+
+        BotClient.Message().ForChat(secondChat)
+            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, secondChat)
+            .WasSend();
+    }
+
+    [Fact] public async Task TestThatNoMatchHappenBetweenOnlineAndOfflineUsers()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+        var (secondUser, secondChat) = await UpdateHandler.OfflineUser(Interests.PostgresSql, Interests.Async);
+
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, firstChat)
+            .WasNotSend();
+
+        BotClient.Message().ForChat(secondChat)
+            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, secondChat)
+            .WasNotSend();
+    }
 
     public async ValueTask DisposeAsync()
     {
