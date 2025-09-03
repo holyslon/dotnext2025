@@ -57,7 +57,7 @@ resource "yandex_mdb_postgresql_user" "user" {
   cluster_id = yandex_mdb_postgresql_cluster.database.id
   name       = local.prefix
   password   = random_password.database_password.result
-  
+
 }
 
 resource "yandex_mdb_postgresql_database" "database" {
@@ -66,5 +66,5 @@ resource "yandex_mdb_postgresql_database" "database" {
   owner      = yandex_mdb_postgresql_user.user.name
   lc_collate = "en_US.UTF-8"
   lc_type    = "en_US.UTF-8"
-  
+
 }
