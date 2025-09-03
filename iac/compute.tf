@@ -1,17 +1,24 @@
-resource "yandex_iam_service_account" "compute_sa" {
+resource "yandex_iam_service_account" "instance_sa" {
   folder_id = data.yandex_resourcemanager_folder.current.folder_id
-  name      = "${local.prefix}-compute-sa"
+  name      = "${local.prefix}-instance-sa"
 }
+
+resource "yandex_iam_service_account" "instance_group_sa" {
+  folder_id = data.yandex_resourcemanager_folder.current.folder_id
+  name      = "${local.prefix}-instance-group-sa"
+}
+
 resource "yandex_container_repository_iam_binding" "image_puller" {
   repository_id = data.yandex_container_repository.image.id
   role          = "container-registry.images.puller"
 
   members = [
-    "serviceAccount:${yandex_iam_service_account.compute_sa.id}",
+    "serviceAccount:${yandex_iam_service_account.instance_sa.id}",
   ]
 }
 
 locals {
+  connection_string = "Server=${yandex_mdb_postgresql_cluster.database.host[0].fqdn};Port=6432;Database=${yandex_mdb_postgresql_database.database.name};User ID=${yandex_mdb_postgresql_user.user.name};Password=${yandex_mdb_postgresql_user.user.password};Encoding=UTF8;Client Encoding=UTF8;"
   app_compose = {
     container_name = "server"
     image          = "${data.yandex_container_repository.image.name}:${local.version}"
@@ -27,6 +34,7 @@ locals {
     restart = "always"
     environment = {
       Telegram__Token        = var.telegram_api_key
+      ConnectionStrings__PG  = local.connection_string
       ASPNETCORE_ENVIRONMENT = "Production"
       ASPNETCORE_URLS        = "http://0.0.0.0:80"
     }
@@ -44,30 +52,17 @@ locals {
 data "yandex_compute_image" "container-optimized-image" {
   family = "container-optimized-image"
 }
-
-resource "yandex_resourcemanager_folder_iam_member" "vpc_admin" {
-  folder_id = data.yandex_resourcemanager_folder.current.folder_id
-
-  role   = "vpc.admin"
-  member = "serviceAccount:${yandex_iam_service_account.compute_sa.id}"
-}
-resource "yandex_resourcemanager_folder_iam_member" "vpc_user" {
-  folder_id = data.yandex_resourcemanager_folder.current.folder_id
-
-  role   = "vpc.user"
-  member = "serviceAccount:${yandex_iam_service_account.compute_sa.id}"
-}
 resource "yandex_resourcemanager_folder_iam_member" "editor" {
   folder_id = data.yandex_resourcemanager_folder.current.folder_id
 
-  role   = "editor"
-  member = "serviceAccount:${yandex_iam_service_account.compute_sa.id}"
+  role   = "compute.editor"
+  member = "serviceAccount:${yandex_iam_service_account.instance_group_sa.id}"
 }
 resource "yandex_compute_instance_group" "compute" {
   name               = "${local.prefix}-compute"
-  service_account_id = yandex_iam_service_account.compute_sa.id
+  service_account_id = yandex_iam_service_account.instance_group_sa.id
   instance_template {
-    service_account_id = yandex_iam_service_account.compute_sa.id
+    service_account_id = yandex_iam_service_account.instance_sa.id
     platform_id        = "standard-v1"
     resources {
       memory = 2
@@ -105,5 +100,8 @@ resource "yandex_compute_instance_group" "compute" {
     max_deleting    = 2
   }
 
-  depends_on = [yandex_resourcemanager_folder_iam_member.vpc_admin]
+  labels = {
+    app = local.prefix
+  }
+  depends_on = [yandex_resourcemanager_folder_iam_member.editor]
 }

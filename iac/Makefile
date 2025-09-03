@@ -3,7 +3,7 @@
 lock:
 	terraform providers lock -platform=windows_amd64 -platform=darwin_amd64 -platform=linux_amd64 -platform=darwin_arm64 -platform=linux_arm64 -net-mirror=https://terraform-mirror.yandexcloud.net/
 
-init: config.s3.tfbackend backend.secret.auto.tfvars.json key.json
+init: config.s3.tfbackend key.json
 	terraform init -backend-config=config.s3.tfbackend
 
 key.json:
