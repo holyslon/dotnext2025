@@ -112,11 +112,11 @@ public static class Texts
 
     public class MatchMessageType
     {
-        public string Text(User.LinkData user, MeetingHappenCommand meetingHappenCommand,
+        public string Text(string baseUrl, User.LinkData user, MeetingHappenCommand meetingHappenCommand,
             MeetingCanceledCommand meetingCanceledCommand)
         {
             return
-                $"Hello we find a person to have coffee with for you. Just dm to {user.ToHtmlLink()}. When you finish just press {meetingHappenCommand.Text} for return to matching. If you dont - just press {meetingCanceledCommand.Text} and we cancel the meeting";
+                $"Hello we find a person to have coffee with for you. Just dm to {user.ToHtmlLink(baseUrl)}. When you finish just press {meetingHappenCommand.Text} for return to matching. If you dont - just press {meetingCanceledCommand.Text} and we cancel the meeting";
         }
 
         public ParseMode ParseMode => ParseMode.Html;
@@ -141,9 +141,9 @@ public static class Texts
 
 internal static class LinkDataExtensions
 {
-    public static string ToHtmlLink(this User.LinkData data)
+    public static string ToHtmlLink(this User.LinkData data, string baseUrl)
     {
-        return $"<a href='tg://user?id={data.UserId}'>{data.Name}</a>";
+        return $"<a href='{baseUrl}/user/{data.UserId}'>{data.Name}</a>";
     }
 }
 

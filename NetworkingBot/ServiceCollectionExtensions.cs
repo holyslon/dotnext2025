@@ -12,12 +12,16 @@ namespace NetworkingBot;
 
 public static class ServiceCollectionExtensions
 {
+    public class AppOptions
+    {
+        public required string BaseUrl { get; set; } = "";
+    }
     public static IServiceCollection AddNetworkingBot(this IServiceCollection services, string connectionString)
     {
         services.AddSingleton<IUpdateHandler, UpdateHandler>();
         services.AddTelegramEventHandlers<Message>(opts =>
             opts.Add<StartCommandHandler>()
-                .Add<JoinCommandHandler>()
+                .Add<JoinCommandHandler>()  
                 .Add<OnlineCommandHandler>()
                 .Add<OfflineCommandHandler>()
                 .Add<MeetingHappenCommandHandler>()
@@ -33,6 +37,7 @@ public static class ServiceCollectionExtensions
                 .Add<PostponeCommandHandler>());
         services.AddTelegramEventHandlers<Poll>(opts =>
             opts.Add<ConversationTopicPoolResponse>());
+        services.AddTransient<RedirectService>();
 
 
         services.AddTransient<IUserStorage>(sp => sp.GetRequiredService<ApplicationDbContext>());

@@ -35,6 +35,7 @@ locals {
     environment = {
       Telegram__Token        = var.telegram_api_key
       ConnectionStrings__PG  = local.connection_string
+      App__BaseUrl           = "https://${local.full_domain}"
       ASPNETCORE_ENVIRONMENT = "Production"
       ASPNETCORE_URLS        = "http://0.0.0.0:80"
     }

@@ -37,6 +37,7 @@ variable "prefix" {
 locals {
   folder_id = var.folder_id
   prefix    = var.prefix
+  domain    = var.prefix
 }
 
 

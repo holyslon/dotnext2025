@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Microsoft.Extensions.Options;
 using NetworkingBot.Commands;
 using NetworkingBot.Infrastructure;
 using Telegram.Bot;
@@ -11,7 +12,8 @@ internal class ConversationTopicPoolResponse(
     ILogger<OnlineCommand> logger,
     IUserStorage userStorage,
     IPollStorage pollStorage,
-    IMatchService matchService) : ITelegramEventHandler<Poll>
+    IMatchService matchService, 
+    IOptionsSnapshot<ServiceCollectionExtensions.AppOptions> appOptions) : ITelegramEventHandler<Poll>
 {
     public async ValueTask OnEvent(ITelegramBotClient bot, Poll eventPayload, CancellationToken cancellationToken)
     {
@@ -37,7 +39,9 @@ internal class ConversationTopicPoolResponse(
             var (found, match) = await matchService.TryFindMatch(info, cancellationToken);
             if (found && match != null)
             {
-                await bot.SendMessage(match.One.ChatId, Texts.MatchMessage.Text(match.Another.LinkData,
+                var baseUrl = appOptions.Value.BaseUrl;
+                await bot.SendMessage(match.One.ChatId, Texts.MatchMessage.Text(baseUrl,
+                        match.Another.LinkData,
                         Commands.Commands.MeetingHappenCommand,
                         Commands.Commands.MeetingCanceledCommand),
                     Texts.MatchMessage.ParseMode,
@@ -46,7 +50,8 @@ internal class ConversationTopicPoolResponse(
                         Commands.Commands.MeetingCanceledCommand.Button(match.One.ChatId)
                     ),
                     cancellationToken: cancellationToken);
-                await bot.SendMessage(match.Another.ChatId, Texts.MatchMessage.Text(match.One.LinkData,
+                await bot.SendMessage(match.Another.ChatId, Texts.MatchMessage.Text(baseUrl,
+                    match.One.LinkData,
                         Commands.Commands.MeetingHappenCommand,
                         Commands.Commands.MeetingCanceledCommand),
                     Texts.MatchMessage.ParseMode,

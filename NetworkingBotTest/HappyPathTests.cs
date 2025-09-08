@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NetworkingBot;
@@ -17,6 +16,7 @@ namespace NetworkBotTest;
 public class HappyPathTests : IAsyncDisposable, IDisposable
 {
     private readonly ServiceProvider _serviceProvider;
+    private const string BaseUrl = "http://localhost:5000";
 
     public HappyPathTests(ITestOutputHelper output)
     {
@@ -29,6 +29,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WithMetrics(opts => opts.AddConsoleExporter(op => op.Targets = ConsoleExporterOutputTargets.Debug))
             .WithTracing(opts => opts.AddConsoleExporter(op => op.Targets = ConsoleExporterOutputTargets.Debug));
         BotClient = new BotMock(output);
+        networkingBot.Configure<ServiceCollectionExtensions.AppOptions>(opts=>opts.BaseUrl = BaseUrl);
         _serviceProvider = networkingBot
             .BuildServiceProvider();
         using var serviceScope = _serviceProvider.CreateScope();
@@ -136,7 +137,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
         var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
 
         BotClient.Message().ForChat(firstChat)
-            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
@@ -144,7 +145,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasSend();
 
         BotClient.Message().ForChat(secondChat)
-            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
@@ -196,7 +197,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
 
         BotClient.Message().ForChat(firstChat)
-            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
@@ -204,7 +205,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasSend();
 
         BotClient.Message().ForChat(secondChat)
-            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
@@ -225,7 +226,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
 
         BotClient.Message().ForChat(firstChat)
-            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
@@ -233,7 +234,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasNotSend();
 
         BotClient.Message().ForChat(secondChat)
-            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
@@ -255,7 +256,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
 
         BotClient.Message().ForChat(firstChat)
-            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
@@ -263,7 +264,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasSend();
 
         BotClient.Message().ForChat(secondChat)
-            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
@@ -280,7 +281,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
 
         BotClient.Message().ForChat(firstChat)
-            .WithText(Texts.MatchMessage.Text(secondUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
@@ -288,7 +289,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasNotSend();
 
         BotClient.Message().ForChat(secondChat)
-            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
@@ -308,7 +309,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
 
         BotClient.Message().ForChat(firstChat)
-            .WithText(Texts.MatchMessage.Text(thirdUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, thirdUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
@@ -316,7 +317,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasNotSend();
 
         BotClient.Message().ForChat(thirdChat)
-            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
                 Commands.MeetingCanceledCommand))
             .WithParseMode(Texts.MatchMessage.ParseMode)
             .WithInlineCallback(Commands.MeetingHappenCommand, thirdChat)

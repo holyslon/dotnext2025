@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Mvc;
 using NetworkingBot;
 using NetworkingBot.Infrastructure;
 using OpenTelemetry.Logs;
@@ -22,6 +23,8 @@ builder.Configuration
 
 var ydbConnectionString = builder.Configuration.GetConnectionString("YDB");
 var pgConnectionString = builder.Configuration.GetConnectionString("PG");
+
+builder.Services.Configure<ServiceCollectionExtensions.AppOptions>(builder.Configuration.GetSection("App"));
 
 var serviceName = "NetworkingBot";
 builder.Logging.AddOpenTelemetry((options) =>
@@ -48,32 +51,6 @@ builder.Services.AddNetworkingBot(pgConnectionString!);
 var app = builder.Build();
 
 
-// Configure the HTTP request pipeline.
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-            new WeatherForecast
-            (
-                DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                Random.Shared.Next(-20, 55),
-                summaries[Random.Shared.Next(summaries.Length)]
-            ))
-        .ToArray();
-    return forecast;
-});
+app.MapGet("/user/{id}", async (string id, [FromServices] RedirectService redirectService, CancellationToken ct) => Results.Redirect(await redirectService.TgUrlById(id, ct)));
 
 app.Run();
-
-namespace NetworkingBot
-{
-    internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-    {
-        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-    }
-}
