@@ -29,6 +29,7 @@ resource "yandex_mdb_postgresql_cluster" "database" {
     }
     postgresql_config = {
       timezone = "UTC"
+      password_encryption = "PASSWORD_ENCRYPTION_MD5"
     }
     access {
       web_sql = true

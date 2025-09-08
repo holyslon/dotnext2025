@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPollStorage>(sp => sp.GetRequiredService<ApplicationDbContext>());
         services.AddTransient<IMatchService>(sp => sp.GetRequiredService<ApplicationDbContext>());
         services.AddTransient<IApplicationClearer>(sp => sp.GetRequiredService<ApplicationDbContext>());
+        services.AddTransient<IMeetingStorage>(sp => sp.GetRequiredService<ApplicationDbContext>());
         services.AddDbContext<ApplicationDbContext>(op=>
         {
             op.UseNpgsql(connectionString, opt =>

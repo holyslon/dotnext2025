@@ -37,22 +37,22 @@ internal class ConversationTopicPoolResponse(
             var (found, match) = await matchService.TryFindMatch(info, cancellationToken);
             if (found && match != null)
             {
-                await bot.SendMessage(match.One.Id.ChatId, Texts.MatchMessage.Text(match.Another.Link,
+                await bot.SendMessage(match.One.ChatId, Texts.MatchMessage.Text(match.Another.LinkData,
                         Commands.Commands.MeetingHappenCommand,
                         Commands.Commands.MeetingCanceledCommand),
                     Texts.MatchMessage.ParseMode,
                     replyMarkup: new InlineKeyboardMarkup(
-                        Commands.Commands.MeetingHappenCommand.Button(match.One.Id.ChatId),
-                        Commands.Commands.MeetingCanceledCommand.Button(match.One.Id.ChatId)
+                        Commands.Commands.MeetingHappenCommand.Button(match.One.ChatId),
+                        Commands.Commands.MeetingCanceledCommand.Button(match.One.ChatId)
                     ),
                     cancellationToken: cancellationToken);
-                await bot.SendMessage(match.Another.Id.ChatId, Texts.MatchMessage.Text(match.One.Link,
+                await bot.SendMessage(match.Another.ChatId, Texts.MatchMessage.Text(match.One.LinkData,
                         Commands.Commands.MeetingHappenCommand,
                         Commands.Commands.MeetingCanceledCommand),
                     Texts.MatchMessage.ParseMode,
                     replyMarkup: new InlineKeyboardMarkup(
-                        Commands.Commands.MeetingHappenCommand.Button(match.Another.Id.ChatId),
-                        Commands.Commands.MeetingCanceledCommand.Button(match.Another.Id.ChatId)
+                        Commands.Commands.MeetingHappenCommand.Button(match.Another.ChatId),
+                        Commands.Commands.MeetingCanceledCommand.Button(match.Another.ChatId)
                     ),
                     cancellationToken: cancellationToken);
             }

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Telegram.Bot.Types;
 
 namespace NetworkingBot.Domain;
 
@@ -18,8 +19,6 @@ public interface IUserBackend
     IReadOnlyCollection<ConversationTopic> Topics { get; }
     long ChatId { get; }
     void UpdateTopics(ImmutableArray<ConversationTopic> topics);
-    void CancelMeeting();
-    void MeetingCompleted();
 }
 
 public class User(IUserBackend storage)
@@ -80,11 +79,6 @@ public class User(IUserBackend storage)
         return false;
     }
 
-    public void MeetingCompleted()
-    {
-        storage.MeetingCompleted();
-    }
-
     public void SetConversationTopics(ImmutableArray<ConversationTopic> topics)
     {
         storage.UpdateTopics(topics);
@@ -97,17 +91,30 @@ public class User(IUserBackend storage)
     public record LinkData(long UserId, string Name);
 
     public LinkData Link => new(storage.UserId, storage.Name);
-
-    public void MeetingCanceled()
-    {
-        storage.CancelMeeting();
-    }
-
-    public bool CanBeInMatchResult => storage is { IsActive: true, ReadyToParticipate: true };
 }
 
-public class Meeting(User one, User another)
+public interface IMeetingBackend
 {
-    public User One { get; } = one;
-    public User Another { get; } = another;
+    Meeting.User One { get; }
+    Meeting.User Another { get; }
+    ValueTask Cancel(CancellationToken cancellationToken);
+    ValueTask Complete(CancellationToken cancellationToken);
+}
+
+public class Meeting(IMeetingBackend backend)
+{
+    public record User(Domain.User.LinkData LinkData, long ChatId);
+    
+    public User One => backend.One;
+    public User Another => backend.Another;
+
+    public ValueTask Cancel(CancellationToken cancellationToken)
+    {
+        return backend.Cancel(cancellationToken);
+    }
+
+    public ValueTask Completed(CancellationToken cancellationToken)
+    {
+        return backend.Complete(cancellationToken);
+    }
 };

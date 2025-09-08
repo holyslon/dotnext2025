@@ -21,7 +21,7 @@ locals {
   connection_string = "Server=${yandex_mdb_postgresql_cluster.database.host[0].fqdn};Port=6432;Database=${yandex_mdb_postgresql_database.database.name};User ID=${yandex_mdb_postgresql_user.user.name};Password=${yandex_mdb_postgresql_user.user.password};Encoding=UTF8;Client Encoding=UTF8;"
   app_compose = {
     container_name = "server"
-    image          = "${data.yandex_container_repository.image.name}:${local.version}"
+    image          = "cr.yandex/${data.yandex_container_repository.image.name}:${local.version}"
     ports = [
       "80:80",
     ]

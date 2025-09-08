@@ -245,9 +245,11 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
     public async Task TestThatMatchPriorityIsForUsersThatWeDontHavePreviousMatches()
     {
         var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
-        await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        var (firstMeetingUser, firstMeetingChat) =await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
 
         await UpdateHandler.Update(callback: Commands.MeetingHappenCommand.CallbackQuery(firstChat));
+        await UpdateHandler.Update(callback: Commands.ReadyForMeeting.CallbackQuery(firstChat));
+        await UpdateHandler.Update(callback: Commands.ReadyForMeeting.CallbackQuery(firstMeetingChat));
 
         var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
 
@@ -269,7 +271,8 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WasSend();
     }
 
-    [Fact] public async Task TestThatNoMatchHappenBetweenOnlineAndOfflineUsers()
+    [Fact] 
+    public async Task TestThatNoMatchHappenBetweenOnlineAndOfflineUsers()
     {
         var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
 
@@ -292,6 +295,55 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WithInlineCallback(Commands.MeetingCanceledCommand, secondChat)
             .WasNotSend();
     }
+    [Fact] 
+    public async Task DontMatchWithNotDecidedUser()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+        await UpdateHandler.Update(callback: Commands.MeetingHappenCommand.CallbackQuery(secondChat));
+        await UpdateHandler.Update(callback: Commands.ReadyForMeeting.CallbackQuery(secondChat));
+
+        var (thirdUser, thirdChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.MatchMessage.Text(thirdUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, firstChat)
+            .WasNotSend();
+
+        BotClient.Message().ForChat(thirdChat)
+            .WithText(Texts.MatchMessage.Text(firstUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, thirdChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, thirdChat)
+            .WasNotSend();
+    }
+    [Fact] 
+    public async Task DoWeSendPostMeetingMessageForBothUsers()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+        await UpdateHandler.Update(callback: Commands.MeetingHappenCommand.CallbackQuery(secondChat));
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.MeetingCompleted(Commands.ReadyForMeeting, Commands.Postpone))
+            .WithInlineCallback(Commands.ReadyForMeeting, firstChat)
+            .WithInlineCallback(Commands.Postpone, firstChat)
+            .WasSend();
+
+        BotClient.Message().ForChat(secondChat)
+            .WithText(Texts.MeetingCompleted(Commands.ReadyForMeeting, Commands.Postpone))
+            .WithInlineCallback(Commands.ReadyForMeeting, secondChat)
+            .WithInlineCallback(Commands.Postpone, secondChat)
+            .WasSend();
+    }
+
 
     public async ValueTask DisposeAsync()
     {

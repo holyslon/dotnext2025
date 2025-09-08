@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using NetworkingBot.Domain;
+using NetworkingBot.Handlers;
 using Telegram.Bot.Types;
 using Poll = NetworkingBot.Domain.Poll;
 using User = NetworkingBot.Domain.User;
@@ -100,7 +101,7 @@ public interface IApplicationClearer
 }
 
 internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ILogger<ApplicationDbContext> logger)
-    : DbContext(options), IUserStorage, IConversationTopicStorage, IPollStorage, IMatchService, IApplicationClearer
+    : DbContext(options), IUserStorage, IConversationTopicStorage, IPollStorage, IMatchService, IApplicationClearer, IMeetingStorage
 {
     private class UserBackend(
         DbUser user,
@@ -224,22 +225,6 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             {
                 topics.Remove(valueTuple);
                 userToDbTopics.Remove(valueTuple.Item1);
-            }
-        }
-
-        public void CancelMeeting()
-        {
-            if (meeting != null)
-            {
-                meeting.TypedStatus = DbMeeting.StatusEnum.Cancelled;
-            }
-        }
-
-        public void MeetingCompleted()
-        {
-            if (meeting != null)
-            {
-                meeting.TypedStatus = DbMeeting.StatusEnum.Finished;
             }
         }
     }
@@ -404,9 +389,12 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             _ => throw new ArgumentOutOfRangeException()
         };
 
-        var userBackend = await UserBackend.Create(user, this, cancellationToken);
+        var currentMeeting = from um in UserToMeetings
+            join m in Meetings on um.MeetingId equals m.Id 
+            where um.UserId == user.Id && m.Status == 1
+                select m;
 
-        if (userBackend.InMeeting)
+        if (await currentMeeting.AnyAsync(cancellationToken: cancellationToken))
         {
             return (false, null);
         }
@@ -434,7 +422,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             candidates = from u in Users
                 from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
-                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.ParticipationMode == targetParticipation.Item2
+                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.ParticipationMode == targetParticipation.Item2 && u.State == 3
                 orderby s.Status
                 select u;
         }
@@ -442,7 +430,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             candidates = from u in Users
                 from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
-                where !inMeetings.Contains(u.Id) && u.Id != user.Id
+                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.State == 3
                 orderby s.Status
                 select u;
         }
@@ -471,9 +459,11 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             UserId = candidate.Id,
             MeetingId = dbMeeting.Id,
         });
+        user.State = 1;
+        candidate.State = 1;
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
-        return (true, new Meeting(new User(await UserBackend.Create(user,  this, cancellationToken)), new User(await UserBackend.Create(candidate,  this, cancellationToken))));
+        return (true, new Meeting(new MeetingBackend(dbMeeting, MeetingUserWithDbId.Create(user), MeetingUserWithDbId.Create(candidate), this)));
     }
 
     public async ValueTask Clear(CancellationToken cancellationToken)
@@ -485,5 +475,95 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
        await Pools.ExecuteDeleteAsync(cancellationToken);
        await PoolsTopics.ExecuteDeleteAsync(cancellationToken);
        await SaveChangesAsync(cancellationToken);
+    }
+
+    record MeetingUserWithDbId(Meeting.User MeetingUser, long DbId)
+    {
+        public static MeetingUserWithDbId Create(DbUser dbUser)
+        {
+            return new MeetingUserWithDbId(new Meeting.User(new User.LinkData(dbUser.TgUserId, dbUser.Username), dbUser.ChatId), dbUser.Id);
+        }
+    };
+    
+    private class MeetingBackend(DbMeeting meeting, MeetingUserWithDbId one, MeetingUserWithDbId another, ApplicationDbContext context) : IMeetingBackend
+    {
+        public Meeting.User One => one.MeetingUser;
+        public Meeting.User Another => another.MeetingUser;
+
+        public ValueTask Cancel(CancellationToken cancellationToken)
+        {
+            return context.CancelMeeting(meeting,  cancellationToken);
+        }
+
+        public ValueTask Complete(CancellationToken cancellationToken)
+        {
+            return context.CompleteMeeting(meeting,  cancellationToken);
+        }
+    }
+
+    private async ValueTask CompleteMeeting(DbMeeting meeting, CancellationToken cancellationToken)
+    {
+        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+        
+        meeting.TypedStatus = DbMeeting.StatusEnum.Finished;
+        
+        await SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+    }
+
+    private async ValueTask CancelMeeting(DbMeeting meeting, CancellationToken cancellationToken)
+    {
+        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+        
+        meeting.TypedStatus = DbMeeting.StatusEnum.Cancelled;
+        
+        await SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+    }
+
+    public async ValueTask WithMeetingForUser(Chat chat, Telegram.Bot.Types.User user, Func<Meeting, ValueTask> action, CancellationToken cancellationToken)
+    {
+        var currentMeeting = from um in UserToMeetings
+            join u in Users on um.UserId equals u.Id
+            join m in Meetings on um.MeetingId equals m.Id 
+            where u.TgUserId == user.Id && u.ChatId == chat.Id && m.Status == 1
+            select m;
+        
+        var meeting = await currentMeeting.FirstOrDefaultAsync(cancellationToken);
+        if (meeting == null)
+        {
+            throw new IMeetingStorage.MeetingForUserNotFound(user.Id);
+        }
+        var usersQuery = from m in Meetings
+            join um in UserToMeetings on m.Id equals um.MeetingId 
+            join u in Users on um.UserId equals u.Id
+            where m.Id == meeting.Id
+                select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId), u.Id);
+        var users = await usersQuery.ToListAsync(cancellationToken);
+        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), this));
+        await action(domain);
+    }
+
+    public async ValueTask WithMeetingForChat(long chatId, Func<Meeting, ValueTask> action, CancellationToken cancellationToken)
+    {
+        var currentMeeting = from um in UserToMeetings
+            join u in Users on um.UserId equals u.Id
+            join m in Meetings on um.MeetingId equals m.Id 
+            where u.ChatId == chatId && m.Status == 1
+            select m;
+        
+        var meeting = await currentMeeting.FirstOrDefaultAsync(cancellationToken);
+        if (meeting == null)
+        {
+            throw new IMeetingStorage.MeetingFoChatNotFound(chatId);
+        }
+        var usersQuery = from m in Meetings
+            join um in UserToMeetings on m.Id equals um.MeetingId 
+            join u in Users on um.UserId equals u.Id
+            where m.Id == meeting.Id
+            select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId), u.Id);
+        var users = await usersQuery.ToListAsync(cancellationToken);
+        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), this));
+        await action(domain);
     }
 }
