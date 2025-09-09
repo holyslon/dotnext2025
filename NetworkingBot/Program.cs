@@ -1,5 +1,7 @@
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NetworkingBot;
 using NetworkingBot.Infrastructure;
 using OpenTelemetry.Logs;
@@ -38,6 +40,14 @@ builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddConsoleExporter())
     .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddConsoleExporter());
 
+builder.Services.AddHealthChecks()
+    .AddNpgSql(pgConnectionString!, 
+        name: "PostgreSQL Database", 
+        failureStatus: HealthStatus.Unhealthy, 
+        tags: ["database", "postgres", "ready"])
+    .AddCheck<TelegramHealthCheck>(name: "telegram", failureStatus: HealthStatus.Unhealthy, tags: ["external", "telegram", "ready"]);
+
+
 
 builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection("Telegram"));
 
@@ -52,5 +62,7 @@ var app = builder.Build();
 
 
 app.MapGet("/user/{id}", async (string id, [FromServices] RedirectService redirectService, CancellationToken ct) => Results.Redirect(await redirectService.TgUrlById(id, ct)));
+app.MapHealthChecks("/health", new HealthCheckOptions {Predicate = registration => registration.Tags.Contains("health")});
+app.MapHealthChecks("/ready", new HealthCheckOptions {Predicate = registration => registration.Tags.Contains("ready")});
 
 app.Run();

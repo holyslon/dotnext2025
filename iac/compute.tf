@@ -56,7 +56,7 @@ data "yandex_compute_image" "container-optimized-image" {
 resource "yandex_resourcemanager_folder_iam_member" "editor" {
   folder_id = data.yandex_resourcemanager_folder.current.folder_id
 
-  role   = "compute.editor"
+  role   = "editor"
   member = "serviceAccount:${yandex_iam_service_account.instance_group_sa.id}"
 }
 resource "yandex_compute_instance_group" "compute" {
@@ -99,6 +99,22 @@ resource "yandex_compute_instance_group" "compute" {
     max_creating    = 2
     max_expansion   = 2
     max_deleting    = 2
+  }
+
+  application_load_balancer {
+    target_group_name = "${local.prefix}-target-group"
+  }
+
+  health_check {
+    http_options {
+      path = "/health"
+      port = 80
+
+    }
+    healthy_threshold   = 3
+    unhealthy_threshold = 5
+    timeout             = 30
+    interval = 60
   }
 
   labels = {

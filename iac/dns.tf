@@ -33,7 +33,7 @@ resource "yandex_dns_recordset" "domain" {
 }
 
 
-resource "yandex_cm_certificate" "signature_certificate" {
+resource "yandex_cm_certificate" "certificate" {
   name    = "${var.prefix}-certificate"
   domains = [local.full_domain]
 
@@ -47,10 +47,10 @@ resource "yandex_cm_certificate" "signature_certificate" {
 }
 
 resource "yandex_dns_recordset" "dns_ssl_challenges" {
-  count   = yandex_cm_certificate.signature_certificate.managed[0].challenge_count
+  count   = yandex_cm_certificate.certificate.managed[0].challenge_count
   zone_id = data.yandex_dns_zone.zone.dns_zone_id
-  name    = yandex_cm_certificate.signature_certificate.challenges[count.index].dns_name
-  type    = yandex_cm_certificate.signature_certificate.challenges[count.index].dns_type
-  data    = [yandex_cm_certificate.signature_certificate.challenges[count.index].dns_value]
+  name    = yandex_cm_certificate.certificate.challenges[count.index].dns_name
+  type    = yandex_cm_certificate.certificate.challenges[count.index].dns_type
+  data    = [yandex_cm_certificate.certificate.challenges[count.index].dns_value]
   ttl     = 60
 }
