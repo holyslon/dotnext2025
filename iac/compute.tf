@@ -114,7 +114,7 @@ resource "yandex_compute_instance_group" "compute" {
     healthy_threshold   = 3
     unhealthy_threshold = 5
     timeout             = 30
-    interval = 60
+    interval            = 60
   }
 
   labels = {
