@@ -17,6 +17,15 @@ resource "yandex_container_repository_iam_binding" "image_puller" {
   ]
 }
 
+resource "yandex_container_repository_iam_binding" "fluentbit_image_puller" {
+  repository_id = data.yandex_container_repository.fluentbit.id
+  role          = "container-registry.images.puller"
+
+  members = [
+    "serviceAccount:${yandex_iam_service_account.instance_sa.id}",
+  ]
+}
+
 locals {
   connection_string = "Server=${yandex_mdb_postgresql_cluster.database.host[0].fqdn};Port=6432;Database=${yandex_mdb_postgresql_database.database.name};User ID=${yandex_mdb_postgresql_user.user.name};Password=${yandex_mdb_postgresql_user.user.password};Encoding=UTF8;Client Encoding=UTF8;"
   app_compose = {
@@ -34,15 +43,15 @@ locals {
     }
     restart = "always"
     environment = {
-      Telegram__Token         = var.telegram_api_key
-      UseTracingExporter      = "OTLP"
-      UseMetricsExporter      = "OTLP"
-      UseLogExporter          = "OTLP"
-      ConnectionStrings__Otlp = "http://logger:4317"
-      ConnectionStrings__PG   = local.connection_string
-      App__BaseUrl            = "https://${local.full_domain}"
-      ASPNETCORE_ENVIRONMENT  = "Production"
-      ASPNETCORE_URLS         = "http://0.0.0.0:80"
+      Telegram__Token                       = var.telegram_api_key
+      NETWORKINGBOT_UseTracingExporter      = "OTLP"
+      NETWORKINGBOT_UseMetricsExporter      = "OTLP"
+      NETWORKINGBOT_UseLogExporter          = "OTLP"
+      NETWORKINGBOT_ConnectionStrings__Otlp = "http://logger:4318"
+      ConnectionStrings__PG                 = local.connection_string
+      App__BaseUrl                          = "https://${local.full_domain}"
+      ASPNETCORE_ENVIRONMENT                = "Production"
+      ASPNETCORE_URLS                       = "http://0.0.0.0:80"
     }
   }
 

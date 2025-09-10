@@ -38,11 +38,8 @@ builder.Services.Configure<ServiceCollectionExtensions.AppOptions>(builder.Confi
 builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(builder.Configuration.GetSection("AspNetCoreInstrumentation"));
 
 var serviceName = "NetworkingBot";
-builder.Logging.AddOpenTelemetry((options) =>
-{
-    options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName))
-        .AddConsoleExporter();
-});
+
+builder.Logging.ClearProviders();
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(serviceName, serviceVersion:typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown", serviceInstanceId:Environment.MachineName))

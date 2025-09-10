@@ -49,7 +49,7 @@ locals {
 
 [OUTPUT]
     Name            yc-logging
-    Match           otel.*
+    Match           otel
     group_id        ${yandex_logging_group.logs.id}
     default_level   INFO
     authorization   instance-service-account
@@ -74,7 +74,7 @@ locals {
   EOF
   fluentbit_compose = {
     container_name = "fluentbit"
-    image          = "cr.yandex/yc/fluent-bit-plugin-yandex:v1.0.3-fluent-bit-1.8.6"
+    image          = "cr.yandex/${data.yandex_container_repository.fluentbit.name}:dev-4.0.0"
     ports = [
       "24224:24224",
       "4318:4318",

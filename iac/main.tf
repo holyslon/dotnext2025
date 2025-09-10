@@ -74,3 +74,7 @@ data "yandex_container_repository" "image" {
   name = "${data.yandex_container_registry.registry.id}/networking-bot"
 }
 
+
+data "yandex_container_repository" "fluentbit" {
+  name = "${data.yandex_container_registry.registry.id}/fluent-bit-plugin-yandex"
+}
