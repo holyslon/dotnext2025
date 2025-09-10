@@ -55,6 +55,10 @@ locals {
     authorization   instance-service-account
 
 [OUTPUT]
+    Name            stdout
+    Match           otel
+
+[OUTPUT]
     Name            yc-logging
     Match           stdout.*
     group_id        ${yandex_logging_group.logs.id}
@@ -86,7 +90,8 @@ locals {
     }
     volumes = [
       "/etc/fluentbit/fluentbit.conf:/fluent-bit/etc/fluent-bit.conf",
-      "/etc/fluentbit/parsers.conf:/fluent-bit/etc/parsers.conf"
+      "/etc/fluentbit/parsers.conf:/fluent-bit/etc/parsers.conf",
+      "/var/log/fluentbit.log:/var/log/fluentbit.log"
     ]
   }
 

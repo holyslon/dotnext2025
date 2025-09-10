@@ -18,6 +18,7 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, IServiceProvider servi
 
     public Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
+        using var _ = logger.BeginScope(new { Update = update });
         return update.Type switch
         {
             UpdateType.Unknown => HandleEvent(botClient, update, cancellationToken),

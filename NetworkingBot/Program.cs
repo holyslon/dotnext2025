@@ -40,6 +40,13 @@ builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(builder.Config
 var serviceName = "NetworkingBot";
 
 builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(opts =>
+{
+    opts.IncludeScopes = true;
+    opts.UseUtcTimestamp = true;
+    opts.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff";
+
+});
 
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(serviceName, serviceVersion:typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown", serviceInstanceId:Environment.MachineName))
