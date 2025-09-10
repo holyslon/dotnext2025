@@ -26,18 +26,23 @@ locals {
       "80:80",
     ]
     logging = {
-      driver = "local"
+      driver = "fluentd"
       options = {
-        max-size = "20m"
+        fluentd-address = "localhost:24224"
+        tag             = "server"
       }
     }
     restart = "always"
     environment = {
-      Telegram__Token        = var.telegram_api_key
-      ConnectionStrings__PG  = local.connection_string
-      App__BaseUrl           = "https://${local.full_domain}"
-      ASPNETCORE_ENVIRONMENT = "Production"
-      ASPNETCORE_URLS        = "http://0.0.0.0:80"
+      Telegram__Token         = var.telegram_api_key
+      UseTracingExporter      = "OTLP"
+      UseMetricsExporter      = "OTLP"
+      UseLogExporter          = "OTLP"
+      ConnectionStrings__Otlp = "http://logger:4317"
+      ConnectionStrings__PG   = local.connection_string
+      App__BaseUrl            = "https://${local.full_domain}"
+      ASPNETCORE_ENVIRONMENT  = "Production"
+      ASPNETCORE_URLS         = "http://0.0.0.0:80"
     }
   }
 
@@ -46,7 +51,12 @@ locals {
     version = "3.7"
     services = {
       server = local.app_compose
+      logger = local.fluentbit_compose
     }
+  }
+
+  cloud_config = {
+    write_files = local.fluentbit_cloud_config_files
   }
 }
 
@@ -83,6 +93,7 @@ resource "yandex_compute_instance_group" "compute" {
     metadata = {
       enable-oslogin     = true
       docker-compose     = yamlencode(local.compose)
+      user-data          = "#cloud-config\n${yamlencode(local.cloud_config)}"
       serial-port-enable = 1
     }
   }
