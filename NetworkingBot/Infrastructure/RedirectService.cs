@@ -4,6 +4,6 @@ public class RedirectService
 {
     public ValueTask<string> TgUrlById(string id, CancellationToken ct)
     {
-        return ValueTask.FromResult($"https://t.me/{id}");
+        return ValueTask.FromResult($"tg://user?id={id}");
     }
 }
