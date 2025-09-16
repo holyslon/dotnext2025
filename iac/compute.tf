@@ -72,8 +72,8 @@ locals {
       NETWORKINGBOT_UseLogExporter          = "OTLP"
       NETWORKINGBOT_ConnectionStrings__Otlp = "http://logger:4318"
       NETWORKINGBOT_Leaderboard__BucketName = resource.yandex_storage_bucket.data.bucket
-      NETWORKINGBOT_App__UpdateSecretToken  = random_string.tg_callback_token
-      ConnectionStrings__PG                 = local.connection_stcring
+      NETWORKINGBOT_App__UpdateSecretToken  = resource.random_password.tg_callback_token.result
+      ConnectionStrings__PG                 = local.connection_string
       App__BaseUrl                          = "https://${local.full_domain}"
       ASPNETCORE_ENVIRONMENT                = "Production"
       ASPNETCORE_URLS                       = "http://0.0.0.0:80"
