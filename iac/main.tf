@@ -65,14 +65,14 @@ data "yandex_vpc_subnet" "subnet_a" {
   subnet_id = "e9b25td1ck5v22ikgfkp"
   folder_id = data.yandex_resourcemanager_folder.current.folder_id
 }
+data "yandex_container_repository" "image" {
+  name = "${data.yandex_container_registry.registry.id}/networking-bot"
+}
 
 locals {
   version = var.app_version
 }
 
-data "yandex_container_repository" "image" {
-  name = "${data.yandex_container_registry.registry.id}/networking-bot"
-}
 
 
 data "yandex_container_repository" "fluentbit" {

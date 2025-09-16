@@ -69,3 +69,11 @@ resource "yandex_mdb_postgresql_database" "database" {
   lc_type    = "en_US.UTF-8"
 
 }
+
+resource "yandex_storage_bucket" "data" {
+  bucket = "${local.prefix}-data-bucket"
+}
+resource "yandex_storage_bucket_grant" "data_grant" {
+  bucket = resource.yandex_storage_bucket.data.bucket
+  acl    = "public-read"
+}

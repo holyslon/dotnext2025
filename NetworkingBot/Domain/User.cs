@@ -97,8 +97,13 @@ public interface IMeetingBackend
 {
     Meeting.User One { get; }
     Meeting.User Another { get; }
+    IEnumerable<Meeting.User> OtherUsers { get; }
+    bool InProgress { get; }
+    Meeting.User Source { get; }
+    bool IsCompleted { get; }
     ValueTask Cancel(CancellationToken cancellationToken);
     ValueTask Complete(CancellationToken cancellationToken);
+    ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken);
 }
 
 public class Meeting(IMeetingBackend backend)
@@ -108,6 +113,11 @@ public class Meeting(IMeetingBackend backend)
     public User One => backend.One;
     public User Another => backend.Another;
 
+    public IEnumerable<User> OtherUsers => backend.OtherUsers;
+    public bool InProgress => backend.InProgress;
+    public User Source => backend.Source;
+    public bool IsCompleted => backend.IsCompleted;
+
     public ValueTask Cancel(CancellationToken cancellationToken)
     {
         return backend.Cancel(cancellationToken);
@@ -116,5 +126,10 @@ public class Meeting(IMeetingBackend backend)
     public ValueTask Completed(CancellationToken cancellationToken)
     {
         return backend.Complete(cancellationToken);
+    }
+
+    public ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken)
+    {
+        return backend.SubmitFeedback(eventPayloadText, cancellationToken);
     }
 };

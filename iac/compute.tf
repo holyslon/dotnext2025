@@ -17,6 +17,14 @@ resource "yandex_container_repository_iam_binding" "image_puller" {
   ]
 }
 
+resource "yandex_storage_bucket_iam_binding" "instance_sa_data_binding" {
+  bucket = resource.yandex_storage_bucket.data.bucket
+  role   = "storage.admin"
+  members = [
+    "serviceAccount:${yandex_iam_service_account.instance_sa.id}",
+  ]
+}
+
 resource "yandex_container_repository_iam_binding" "fluentbit_image_puller" {
   repository_id = data.yandex_container_repository.fluentbit.id
   role          = "container-registry.images.puller"
@@ -27,7 +35,16 @@ resource "yandex_container_repository_iam_binding" "fluentbit_image_puller" {
 }
 
 locals {
-  connection_string = "Server=${yandex_mdb_postgresql_cluster.database.host[0].fqdn};Port=6432;Database=${yandex_mdb_postgresql_database.database.name};User ID=${yandex_mdb_postgresql_user.user.name};Password=${yandex_mdb_postgresql_user.user.password};Encoding=UTF8;Client Encoding=UTF8;"
+  connection_string = <<EOF
+    Server=${yandex_mdb_postgresql_cluster.database.host[0].fqdn};
+    Port=6432;
+    Database=${yandex_mdb_postgresql_database.database.name};
+    User ID=${yandex_mdb_postgresql_user.user.name};
+    Password=${yandex_mdb_postgresql_user.user.password};
+    Encoding=UTF8;
+    Client Encoding=UTF8;
+  EOF
+
   app_compose = {
     container_name = "server"
     image          = "cr.yandex/${data.yandex_container_repository.image.name}:${local.version}"
@@ -48,6 +65,7 @@ locals {
       NETWORKINGBOT_UseMetricsExporter      = "OTLP"
       NETWORKINGBOT_UseLogExporter          = "OTLP"
       NETWORKINGBOT_ConnectionStrings__Otlp = "http://logger:4318"
+      NETWORKINGBOT_Leaderboard__BucketName = resource.yandex_storage_bucket.data.bucket
       ConnectionStrings__PG                 = local.connection_string
       App__BaseUrl                          = "https://${local.full_domain}"
       ASPNETCORE_ENVIRONMENT                = "Production"

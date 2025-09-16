@@ -58,7 +58,6 @@ internal abstract class MeetingUniversalCommandHandler<TCommand>(ILogger<TComman
             logger.LogError($"User is null");
             return;
         }
-        
 
         await meetingStorage.WithMeetingForUser(chat, user, meeting =>
             Handle(botClient, cancellationToken, meeting, chat.Id), cancellationToken);

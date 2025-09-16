@@ -1,5 +1,4 @@
 using NetworkingBot.Commands;
-using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using User = NetworkingBot.Domain.User;
 
@@ -9,106 +8,67 @@ public static class Texts
 {
     public static string Welcome(JoinCommand command, PostponeCommand laterButton)
     {
-        return $"Welcome. To join press {command.Text}. To postpone press {laterButton.Text}.";
+        return $"Привет! Если готов(а) познакомиться с кем-нибудь, нажми {command.Text}. Если просто наблюдаешь - выбери {laterButton.Text} 😊";
     }
 
     public static string ChooseOnlineOrOffline(OnlineCommand onlineButton, OfflineCommand offlineButton)
     {
-        return $"To online press {onlineButton.Text}. To offline press {offlineButton.Text}.";
+        return $"Отлично 🎉 Уже ищу тебе собеседника! А пока расскажи - ты на площадке (нажми тогда {offlineButton.Text}) или онлайн (нажми тут {onlineButton.Text})";
     }
 
     public static string WaitingForYouToReturn(JoinCommand command)
     {
-        return $"Sad. If yo whant come back just type {command.SlashCommand()}";
+        return $"Грустно. Но если передумаешь - набери {command.SlashCommand()} и я начну поиск пары для тебя";
     }
 
     public static string ChooseYourInterests()
     {
-        return "Choose your interests.";
-    }
-
-    public static string Online()
-    {
-        return "Welcome";
-    }
-
-    public static string Offline()
-    {
-        return "Welcome";
-    }
-
-    public static string ChooseTheme()
-    {
-        return "Welcome";
-    }
-
-    public static string Confirm()
-    {
-        return "Welcome";
-    }
-
-    public static string FoundAPair()
-    {
-        return "Welcome";
-    }
-
-    public static string SearchingForAPair()
-    {
-        return "Welcome";
-    }
-
-    public static string WelcomeMessage()
-    {
-        return "Welcome";
+        return "Выбери о чем тебе интересно поговорить";
     }
 
 
     public static string YesButton()
     {
-        return "yes";
-    }
-
-    public static string SubmitInterestsButton()
-    {
-        return "submit";
+        return "Да";
     }
 
     public static string LaterButton()
     {
-        return "may be later";
+        return "Может позже";
     }
 
     public static string OnlineButton()
     {
-        return "online";
+        return "Онлайн";
     }
 
     public static string OfflineButton()
     {
-        return "offline";
+        return "На площадке";
     }
 
     public static string ReadyForMeetingButton()
     {
-        return "Ready";
+        return "Готов";
     }
 
     public static string WaitForNextMatch(PostponeCommand postpone)
     {
-        return "We will contact with you when we find next pair for you";
+        return $"Я напишу как только найду для тебя следующую пару. Если хочешь отказаться от встречь нажми {postpone.Text}";
     }
 
     public static string MeetingHappenButton()
     {
-        return "meeting_happen";
+        return "Встреча состоялась";
     }
 
     public static string MeetingCanceledButton()
     {
-        return "meeting_canceled";
+        return "Не встретились";
     }
 
     public static MatchMessageType MatchMessage => new();
+    public static MessageFromUserType MessageFromUser => new();
 
     public class MatchMessageType
     {
@@ -116,40 +76,50 @@ public static class Texts
             MeetingCanceledCommand meetingCanceledCommand)
         {
             return
-                $"Hello we find a person to have coffee with for you. Just dm to {user.ToHtmlLink(baseUrl)}. When you finish just press {meetingHappenCommand.Text} for return to matching. If you dont - just press {meetingCanceledCommand.Text} and we cancel the meeting";
+                $"Ура 🎉 Мы нашли собеседника. Напиши этому пользователю {user.ToHtmlLink()} - не стесняйся писать первым и предлагать удобную локацию для встречи. Это может быть зона кофебрейков, для ориентира какой-то стенд, или же можно встретиться на улице около площадки - решать вам ☀️\n\nКогда встреча состоится, пожалуйста, нажми на кнопку \"{meetingHappenCommand.Text}\" - хочу обезличено посчитать, сколько новых знакомств я помог совершить на конференции 😊\n\nЕсли встреча не состоялась - нажми \"{meetingCanceledCommand.Text}\" - в этом случае я сразу же начну искать нового собеседника 👌. Если ник собеседника не выделяется - значит у него включены настройки приватности. Но это не беда - напиши прямо сюда и он увидит твое сообщение в своем чате с ботом";
+        }
+
+        public ParseMode ParseMode => ParseMode.Html;
+    }
+    
+    public class MessageFromUserType
+    {
+        public string Text(User.LinkData user, string? originalMessage)
+        {
+            return
+                $"Пользователь {user.ToHtmlLink()} отправил сообщение: {originalMessage}";
         }
 
         public ParseMode ParseMode => ParseMode.Html;
     }
 
-    public static string AddReviewButton()
-    {
-        return "add_review";
-    }
-
 
     public static string MeetingCompleted(ReadyForMeeting readyForMeeting, PostponeCommand postpone)
     {
-        return "Meeting completed";
+        return $"Встреча закончена. Если готов для следующей просто нажми {readyForMeeting.Text}. Если не хочешь больше встречь нажми {postpone.Text}. Так же я буду тебе очень благодарен если ты оставишь обратную связь по встрече. Ты можешь просто написать сообщение и я все увижу";
     }
-
+    public static string ThankYouForFeedBack(ReadyForMeeting readyForMeeting, PostponeCommand postpone)
+    {
+        return $"Спасибо огромное за обратную связь. Она помогает мне стать лучше! А теперь если готов для следующей просто нажми {readyForMeeting.Text}, ну а если не хочешь больше встречь нажми {postpone.Text}";
+    }
     public static string MeetingCanceled(ReadyForMeeting readyForMeeting, PostponeCommand postpone)
     {
-        return "Meeting canceled";
+        return $"Встреча отменена. Мне жаль что так получилось. Если готов для следующей просто нажми {readyForMeeting.Text}. Если не хочешь больше встречь нажми {postpone.Text}. Так же я буду тебе очень благодарен если ты оставишь обратную связь по встрече. Ты можешь просто написать сообщение и я все увижу";
     }
 }
 
 internal static class LinkDataExtensions
 {
-    public static string ToHtmlLink(this User.LinkData data, string baseUrl)
+    public static string ToHtmlLink(this User.LinkData data)
     {
-        return $"<a href='{baseUrl}/user/{data.UserId}'>{data.Name}</a>";
+        // return $"<a href='{baseUrl}/user/{data.UserId}'>{data.Name}</a>";
+        return $"<a href='tg://user?id={data.UserId}'>{data.Name}</a>";
     }
 }
 
 public static class Interests
 {
     public static string DotNet => "DotNet";
-    public static string PostgresSql => "PostgresSql";
-    public static string Async => "Async";
+    public static string PostgresSql => "Без темы";
+    public static string Async => "Architecture";
 }

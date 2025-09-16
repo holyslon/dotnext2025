@@ -1,8 +1,10 @@
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
+using Amazon.S3;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using NetworkingBot;
 using NetworkingBot.Infrastructure;
 using Npgsql;
@@ -11,6 +13,8 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
 
 [assembly:InternalsVisibleTo("NetworkingBotTest")]
 
@@ -36,6 +40,8 @@ var otlpConnectionString = builder.Configuration.GetConnectionString("Otlp");
 
 builder.Services.Configure<ServiceCollectionExtensions.AppOptions>(builder.Configuration.GetSection("App"));
 builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(builder.Configuration.GetSection("AspNetCoreInstrumentation"));
+builder.Services.Configure<AmazonS3Config>(builder.Configuration.GetSection("AmazonS3Config"));
+builder.Services.Configure<LeaderboardHostedService.Options>(builder.Configuration.GetSection("Leaderboard"));
 
 var serviceName = "NetworkingBot";
 
@@ -126,6 +132,7 @@ builder.Services.AddSingleton<TelegramBot>();
 builder.Services.AddHostedService<TelegramHostedService>();
 
 builder.Services.AddNetworkingBot(pgConnectionString!);
+builder.Services.ConfigureTelegramBot<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => opts.SerializerOptions);
 
 // Add services to the container.
 
@@ -135,5 +142,32 @@ var app = builder.Build();
 app.MapGet("/user/{id}", async (string id, [FromServices] RedirectService redirectService, CancellationToken ct) => Results.Redirect(await redirectService.TgUrlById(id, ct)));
 app.MapHealthChecks("/health", new HealthCheckOptions {Predicate = registration => registration.Tags.Contains("health")});
 app.MapHealthChecks("/ready", new HealthCheckOptions {Predicate = registration => registration.Tags.Contains("ready")});
-
+app.MapPost("/updates",
+    async ([FromBody] Update update, 
+        [FromHeader(Name = "X-Telegram-Bot-Api-Secret-Token")]string secretToken,
+        [FromServices] IUpdateHandler updateHandler, 
+        [FromServices]TelegramBot bot, 
+        [FromServices] ILogger<UpdateHandler> logger,
+        [FromServices] IOptionsSnapshot<ServiceCollectionExtensions.AppOptions> appOptions,
+        CancellationToken ct) =>
+    {
+        using var _ =logger.BeginScope(new { update });
+        var appToken = appOptions.Value.UpdateSecretToken;
+        if (!string.IsNullOrEmpty(appToken) && !secretToken.Equals(appToken, StringComparison.Ordinal))
+        {
+            using var __ =logger.BeginScope(new { secretToken });
+            logger.LogInformation("Update secret token is different than secret token");
+            return Results.Unauthorized();
+        }
+        try
+        {
+            await updateHandler.HandleUpdateAsync(bot, update, ct);
+            return Results.Ok();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Fail to handle update");
+            return Results.StatusCode(500);
+        }
+    });
 app.Run();

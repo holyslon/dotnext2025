@@ -344,8 +344,56 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WithInlineCallback(Commands.Postpone, secondChat)
             .WasSend();
     }
+    [Fact] 
+    public async Task MatchUsersCanChatViaBot()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
 
+        await UpdateHandler.HandleUpdateAsync(Create.Update(Create.Message("Hi there", firstChat, firstUser)));
+        await UpdateHandler.HandleUpdateAsync(Create.Update(Create.Message("Hello", secondChat, secondUser)));
+        
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.MessageFromUser.Text(secondUser.LinkData(), "Hello"))
+            .WithParseMode(Texts.MessageFromUser.ParseMode)
+            .WasSend();
 
+        BotClient.Message().ForChat(secondChat)
+            .WithText(Texts.MessageFromUser.Text(firstUser.LinkData(), "Hi there"))
+            .WithParseMode(Texts.MessageFromUser.ParseMode)
+            .WasSend();
+    }
+    [Fact] 
+    public async Task UserCanSendFeedbackAfterMeeting()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        
+        await UpdateHandler.Update(callback: Commands.MeetingHappenCommand.CallbackQuery(firstChat));
+        await UpdateHandler.HandleUpdateAsync(Create.Update(Create.Message("Meeting was nice", firstChat, firstUser)));
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.ThankYouForFeedBack(Commands.ReadyForMeeting, Commands.Postpone))
+            .WithInlineCallback(Commands.ReadyForMeeting, firstChat)
+            .WithInlineCallback(Commands.Postpone, firstChat)
+            .WasSend();
+    }
+
+    [Fact] 
+    public async Task UserCanSendFeedbackAfterCancelMeeting()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+        await UpdateHandler.Update(callback: Commands.MeetingCanceledCommand.CallbackQuery(firstChat));
+        await UpdateHandler.HandleUpdateAsync(Create.Update(Create.Message("Other person was rude", firstChat, firstUser)));
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.ThankYouForFeedBack(Commands.ReadyForMeeting, Commands.Postpone))
+            .WithInlineCallback(Commands.ReadyForMeeting, firstChat)
+            .WithInlineCallback(Commands.Postpone, firstChat)
+            .WasSend();
+    }
     public async ValueTask DisposeAsync()
     {
         await _serviceProvider.GetRequiredService<IApplicationClearer>().Clear();

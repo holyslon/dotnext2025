@@ -463,7 +463,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         candidate.State = 1;
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
-        return (true, new Meeting(new MeetingBackend(dbMeeting, MeetingUserWithDbId.Create(user), MeetingUserWithDbId.Create(candidate), this)));
+        return (true, new Meeting(new MeetingBackend(dbMeeting, MeetingUserWithDbId.Create(user), MeetingUserWithDbId.Create(candidate), MeetingUserWithDbId.Create(user), [MeetingUserWithDbId.Create(candidate)],this)));
     }
 
     public async ValueTask Clear(CancellationToken cancellationToken)
@@ -485,10 +485,14 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         }
     };
     
-    private class MeetingBackend(DbMeeting meeting, MeetingUserWithDbId one, MeetingUserWithDbId another, ApplicationDbContext context) : IMeetingBackend
+    private class MeetingBackend(DbMeeting meeting, MeetingUserWithDbId one, MeetingUserWithDbId another, MeetingUserWithDbId source, IReadOnlyCollection<MeetingUserWithDbId> other, ApplicationDbContext context) : IMeetingBackend
     {
         public Meeting.User One => one.MeetingUser;
         public Meeting.User Another => another.MeetingUser;
+        public IEnumerable<Meeting.User> OtherUsers => other.Select(it=>it.MeetingUser);
+        public bool InProgress => meeting.Status == 1;
+        public Meeting.User Source => source.MeetingUser;
+        public bool IsCompleted => meeting.Status > 1;
 
         public ValueTask Cancel(CancellationToken cancellationToken)
         {
@@ -499,6 +503,16 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             return context.CompleteMeeting(meeting,  cancellationToken);
         }
+
+        public ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken)
+        {
+            return context.SubmitFeedback(meeting, eventPayloadText, cancellationToken);
+        }
+    }
+
+    private ValueTask SubmitFeedback(DbMeeting meeting, string? eventPayloadText, CancellationToken cancellationToken)
+    {
+        return ValueTask.CompletedTask;
     }
 
     private async ValueTask CompleteMeeting(DbMeeting meeting, CancellationToken cancellationToken)
@@ -526,13 +540,16 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         var currentMeeting = from um in UserToMeetings
             join u in Users on um.UserId equals u.Id
             join m in Meetings on um.MeetingId equals m.Id 
-            where u.TgUserId == user.Id && u.ChatId == chat.Id && m.Status == 1
+            where u.TgUserId == user.Id && u.ChatId == chat.Id 
+                                        // && m.Status == 1
             select m;
         
         var meeting = await currentMeeting.FirstOrDefaultAsync(cancellationToken);
         if (meeting == null)
         {
-            throw new IMeetingStorage.MeetingForUserNotFound(user.Id);
+            using var _ = logger.BeginScope(new { chat, user });
+            logger.LogInformation("meeting not found");
+            return;
         }
         var usersQuery = from m in Meetings
             join um in UserToMeetings on m.Id equals um.MeetingId 
@@ -540,7 +557,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             where m.Id == meeting.Id
                 select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId), u.Id);
         var users = await usersQuery.ToListAsync(cancellationToken);
-        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), this));
+        var source = users.First(u=>u.MeetingUser.ChatId == chat.Id);
+        var rest = users.Where(u => u.MeetingUser.ChatId != chat.Id);
+        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), source, [..rest], this));
         await action(domain);
     }
 
@@ -549,13 +568,16 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         var currentMeeting = from um in UserToMeetings
             join u in Users on um.UserId equals u.Id
             join m in Meetings on um.MeetingId equals m.Id 
-            where u.ChatId == chatId && m.Status == 1
+            where u.ChatId == chatId 
+                  // && m.Status == 1
             select m;
         
         var meeting = await currentMeeting.FirstOrDefaultAsync(cancellationToken);
         if (meeting == null)
         {
-            throw new IMeetingStorage.MeetingFoChatNotFound(chatId);
+            using var _ = logger.BeginScope(new { chatId });
+            logger.LogInformation("meeting not found");
+            return;
         }
         var usersQuery = from m in Meetings
             join um in UserToMeetings on m.Id equals um.MeetingId 
@@ -563,7 +585,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             where m.Id == meeting.Id
             select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId), u.Id);
         var users = await usersQuery.ToListAsync(cancellationToken);
-        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), this));
+        var source = users.First(u=>u.MeetingUser.ChatId == chatId);
+        var rest = users.Where(u => u.MeetingUser.ChatId != chatId);
+        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(),source, [..rest],  this));
         await action(domain);
     }
 }

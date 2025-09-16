@@ -26,13 +26,38 @@ resource "yandex_alb_backend_group" "server-backend-group" {
   }
 }
 
+resource "yandex_alb_backend_group" "static-api-backend-group" {
+  name = "${local.prefix}-static-api-backend-group"
+
+  http_backend {
+    name           = "${local.prefix}-static-api-http-backend"
+    storage_bucket = resource.yandex_storage_bucket.data.bucket
+  }
+}
+
 
 resource "yandex_alb_virtual_host" "vhost" {
   name           = "${local.prefix}-virtual-host"
   http_router_id = yandex_alb_http_router.router.id
   authority      = [local.full_domain]
   route {
+    name = "static-json-route"
+    http_route {
+      http_match {
+        path {
+          prefix = "/api/static"
+        }
+      }
+      http_route_action {
+        backend_group_id = yandex_alb_backend_group.static-api-backend-group.id
+        timeout          = "50m0s"
+        prefix_rewrite   = "/"
+      }
+    }
+  }
+  route {
     name = "server-route"
+
     http_route {
       http_match {
         path {

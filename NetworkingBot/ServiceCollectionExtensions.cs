@@ -1,6 +1,9 @@
 
+using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Microsoft.IO;
 using NetworkingBot.Handlers;
 using NetworkingBot.Infrastructure;
 using Telegram.Bot;
@@ -15,6 +18,7 @@ public static class ServiceCollectionExtensions
     public class AppOptions
     {
         public required string BaseUrl { get; set; } = "";
+        public required string UpdateSecretToken { get; set; } = "";
     }
     public static IServiceCollection AddNetworkingBot(this IServiceCollection services, string connectionString)
     {
@@ -26,6 +30,8 @@ public static class ServiceCollectionExtensions
                 .Add<OfflineCommandHandler>()
                 .Add<MeetingHappenCommandHandler>()
                 .Add<MeetingCanceledCommandHandler>()
+                .Add<MeetingMessageHandler>()
+                .Add<MeetingFeedbackMessageHandler>()
                 .Add<PostponeCommandHandler>());
         services.AddTelegramEventHandlers<CallbackQuery>(opts =>
             opts.Add<JoinCommandHandler>()
@@ -54,6 +60,10 @@ public static class ServiceCollectionExtensions
             });
         });
         services.AddHostedService<MigrationService>();
+        services.AddHostedService<LeaderboardHostedService>();
+        services.AddSingleton<RecyclableMemoryStreamManager>();
+        
+        services.AddTransient<AmazonS3Client>(sp => new AmazonS3Client(sp.GetRequiredService<IOptionsSnapshot<AmazonS3Config>>().Value));
 
         return services;
     }
@@ -82,6 +92,11 @@ public static class ServiceCollectionExtensions
                     logger.LogInformation(e, "Service collection disposed");
                     break;
                 }
+                catch (Exception e)
+                {
+                    logger.LogError(e, "Fail to find handler in di");
+                }
+
             }
         }
     }
