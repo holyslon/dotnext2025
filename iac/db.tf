@@ -69,11 +69,48 @@ resource "yandex_mdb_postgresql_database" "database" {
   lc_type    = "en_US.UTF-8"
 
 }
+resource "yandex_iam_service_account" "bucket-sa" {
+  folder_id = data.yandex_resourcemanager_folder.current.folder_id
+  name      = "${local.prefix}-bucket-sa"
+}
+
+// Grant permissions
+resource "yandex_resourcemanager_folder_iam_member" "sa-editor" {
+  folder_id = data.yandex_resourcemanager_folder.current.folder_id
+  role      = "storage.admin"
+  member    = "serviceAccount:${yandex_iam_service_account.bucket-sa.id}"
+}
+
+// Create Static Access Keys
+resource "yandex_iam_service_account_static_access_key" "bucket-sa-static-key" {
+  service_account_id = yandex_iam_service_account.bucket-sa.id
+  description        = "static access key for object storage"
+}
 
 resource "yandex_storage_bucket" "data" {
-  bucket = "${local.prefix}-data-bucket"
+  access_key = yandex_iam_service_account_static_access_key.bucket-sa-static-key.access_key
+  secret_key = yandex_iam_service_account_static_access_key.bucket-sa-static-key.secret_key
+  bucket     = "${local.prefix}-data-bucket"
+  depends_on = [yandex_resourcemanager_folder_iam_member.sa-editor]
 }
 resource "yandex_storage_bucket_grant" "data_grant" {
-  bucket = resource.yandex_storage_bucket.data.bucket
-  acl    = "public-read"
+  access_key = yandex_iam_service_account_static_access_key.bucket-sa-static-key.access_key
+  secret_key = yandex_iam_service_account_static_access_key.bucket-sa-static-key.secret_key
+  bucket     = resource.yandex_storage_bucket.data.bucket
+  grant {
+    permissions = [
+      "READ",
+    ]
+    type = "Group"
+    uri  = "http://acs.amazonaws.com/groups/global/AllUsers"
+  }
+  depends_on = [yandex_resourcemanager_folder_iam_member.sa-editor]
+}
+resource "yandex_storage_object" "test-static-api" {
+  access_key   = yandex_iam_service_account_static_access_key.bucket-sa-static-key.access_key
+  secret_key   = yandex_iam_service_account_static_access_key.bucket-sa-static-key.secret_key
+  bucket       = resource.yandex_storage_bucket.data.bucket
+  key          = "health"
+  content      = jsonencode({ Ok = true })
+  content_type = "application/json"
 }

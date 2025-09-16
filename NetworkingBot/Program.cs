@@ -1,5 +1,8 @@
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 using Amazon.S3;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +54,7 @@ builder.Logging.AddJsonConsole(opts =>
     opts.IncludeScopes = true;
     opts.UseUtcTimestamp = true;
     opts.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff";
+    opts.JsonWriterOptions = new JsonWriterOptions { Indented = false, Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)};
 
 });
 
@@ -132,7 +136,7 @@ builder.Services.AddSingleton<TelegramBot>();
 builder.Services.AddHostedService<TelegramHostedService>();
 
 builder.Services.AddNetworkingBot(pgConnectionString!);
-builder.Services.ConfigureTelegramBot<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => opts.SerializerOptions);
+// builder.Services.ConfigureTelegramBot<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts => opts.SerializerOptions);
 
 // Add services to the container.
 
@@ -143,17 +147,18 @@ app.MapGet("/user/{id}", async (string id, [FromServices] RedirectService redire
 app.MapHealthChecks("/health", new HealthCheckOptions {Predicate = registration => registration.Tags.Contains("health")});
 app.MapHealthChecks("/ready", new HealthCheckOptions {Predicate = registration => registration.Tags.Contains("ready")});
 app.MapPost("/updates",
-    async ([FromBody] Update update, 
-        [FromHeader(Name = "X-Telegram-Bot-Api-Secret-Token")]string secretToken,
+    async (
+        [FromBody] Update update, 
+        [FromHeader(Name = "X-Telegram-Bot-Api-Secret-Token")]string? secretToken,
         [FromServices] IUpdateHandler updateHandler, 
-        [FromServices]TelegramBot bot, 
+        [FromServices] TelegramBot bot, 
         [FromServices] ILogger<UpdateHandler> logger,
         [FromServices] IOptionsSnapshot<ServiceCollectionExtensions.AppOptions> appOptions,
         CancellationToken ct) =>
     {
         using var _ =logger.BeginScope(new { update });
         var appToken = appOptions.Value.UpdateSecretToken;
-        if (!string.IsNullOrEmpty(appToken) && !secretToken.Equals(appToken, StringComparison.Ordinal))
+        if (!string.IsNullOrEmpty(appToken) && !secretToken!.Equals(appToken, StringComparison.Ordinal))
         {
             using var __ =logger.BeginScope(new { secretToken });
             logger.LogInformation("Update secret token is different than secret token");

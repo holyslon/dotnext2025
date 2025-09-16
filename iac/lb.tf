@@ -51,7 +51,7 @@ resource "yandex_alb_virtual_host" "vhost" {
       http_route_action {
         backend_group_id = yandex_alb_backend_group.static-api-backend-group.id
         timeout          = "50m0s"
-        prefix_rewrite   = "/"
+        prefix_rewrite   = " "
       }
     }
   }

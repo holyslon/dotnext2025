@@ -34,6 +34,12 @@ resource "yandex_container_repository_iam_binding" "fluentbit_image_puller" {
   ]
 }
 
+resource "random_password" "tg_callback_token" {
+  length           = 24
+  special          = true
+  override_special = "_%@"
+}
+
 locals {
   connection_string = <<EOF
     Server=${yandex_mdb_postgresql_cluster.database.host[0].fqdn};
@@ -66,7 +72,8 @@ locals {
       NETWORKINGBOT_UseLogExporter          = "OTLP"
       NETWORKINGBOT_ConnectionStrings__Otlp = "http://logger:4318"
       NETWORKINGBOT_Leaderboard__BucketName = resource.yandex_storage_bucket.data.bucket
-      ConnectionStrings__PG                 = local.connection_string
+      NETWORKINGBOT_App__UpdateSecretToken  = random_string.tg_callback_token
+      ConnectionStrings__PG                 = local.connection_stcring
       App__BaseUrl                          = "https://${local.full_domain}"
       ASPNETCORE_ENVIRONMENT                = "Production"
       ASPNETCORE_URLS                       = "http://0.0.0.0:80"

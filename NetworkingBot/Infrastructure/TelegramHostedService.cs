@@ -19,9 +19,16 @@ public class TelegramHostedService(ILogger<TelegramHostedService> logger,
                 var url = appOptions.Value.BaseUrl+"/updates";
                 var token = string.IsNullOrWhiteSpace(appOptions.Value.UpdateSecretToken) ? null : appOptions.Value.UpdateSecretToken;
                 await bot.SetWebhook(url, secretToken: token, cancellationToken: stoppingToken);
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    await Task.Delay(1000, stoppingToken);
+                }
             }
-            
-            await bot.ReceiveAsync(updateHandler, cancellationToken: stoppingToken);
+            else
+            {
+
+                await bot.ReceiveAsync(updateHandler, cancellationToken: stoppingToken);
+            }
         }
         catch (OperationCanceledException)
         {
