@@ -61,6 +61,8 @@ internal class DbUserToMeeting
     public long Id { get; set; }
     public required long UserId { get; set; }
     public required long MeetingId { get; set; }
+    
+    public required bool FeedbackAvailable { get; set; }
 }
 
 internal class DbConversationTopic
@@ -76,6 +78,17 @@ internal class DbUserToDbTopic
     public required long UserId { get; set; }
     public required long TopicId { get; set; }
 }
+
+[Index(nameof(UserId))]
+[Index(nameof(MeetingId))]
+internal class DbFeedback
+{
+    public long Id { get; set; }
+    public required long UserId { get; set; }
+    public required long MeetingId { get; set; }
+    public required string Feedback { get; set; }
+}
+
 
 [Index(nameof(UserId))]
 [Index(nameof(ExternalId))]
@@ -207,7 +220,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
                 topic => topic.Id).ToImmutableArray();
             var toRemove = topics.ExceptBy(
                 newTopics.Select(t=>t.Id), 
-                tuple => tuple.Item2.Id.ToString());
+                tuple => tuple.Item2.Id.ToString()).ToImmutableArray();
 
             foreach (var conversationTopic in toAdd)
             {
@@ -236,6 +249,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
     public required DbSet<DbUserToMeeting> UserToMeetings { get; set; }
     public required DbSet<DbPool> Pools { get; set; }
     public required DbSet<DbPoolToDbTopic> PoolsTopics { get; set; }
+    public required DbSet<DbFeedback> Feedbacks { get; set; }
 
     private static ConversationTopic Map(DbConversationTopic topic)
     {
@@ -277,6 +291,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         var domainUser = new User(await UserBackend.Create(dbUser, this, cancellationToken));
 
         var res = await action(domainUser);
+        await UserToMeetings.Where(m=>m.UserId == dbUser.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
+
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return res;
@@ -292,6 +309,8 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         var domainUser = new User(await UserBackend.Create(dbUser, this, cancellationToken));
 
         var res = await action(domainUser);
+        await UserToMeetings.Where(m=>m.UserId == dbUser.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return res;
@@ -331,6 +350,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
                 });
                 
             }
+            await UserToMeetings.Where(m=>m.UserId == userStorage.Inner.Id).ExecuteUpdateAsync(
+                um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
+
             await SaveChangesAsync(cancellationToken);
         }
         else
@@ -456,14 +478,21 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             UserId = user.Id,
             MeetingId = dbMeeting.Id,
+            FeedbackAvailable = false,
         });
         UserToMeetings.Add(new DbUserToMeeting
         {
             UserId = candidate.Id,
             MeetingId = dbMeeting.Id,
+            FeedbackAvailable = false,
         });
         user.State = 1;
         candidate.State = 1;
+        await UserToMeetings.Where(m=>m.UserId == user.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
+        await UserToMeetings.Where(m=>m.UserId == candidate.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
+
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
         return (true, new Meeting(new MeetingBackend(dbMeeting, MeetingUserWithDbId.Create(user), MeetingUserWithDbId.Create(candidate), MeetingUserWithDbId.Create(user), [MeetingUserWithDbId.Create(candidate)],this)));
@@ -484,7 +513,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
     {
         public static MeetingUserWithDbId Create(DbUser dbUser)
         {
-            return new MeetingUserWithDbId(new Meeting.User(new User.LinkData(dbUser.TgUserId, dbUser.Username), dbUser.ChatId), dbUser.Id);
+            return new MeetingUserWithDbId(new Meeting.User(new User.LinkData(dbUser.TgUserId, dbUser.Username), dbUser.ChatId, false), dbUser.Id);
         }
     };
     
@@ -509,13 +538,25 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
 
         public ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken)
         {
-            return context.SubmitFeedback(meeting, eventPayloadText, cancellationToken);
+            return context.SubmitFeedback(meeting, source, eventPayloadText, cancellationToken);
         }
     }
 
-    private ValueTask SubmitFeedback(DbMeeting meeting, string? eventPayloadText, CancellationToken cancellationToken)
+    private async ValueTask SubmitFeedback(DbMeeting meeting, MeetingUserWithDbId source, string? eventPayloadText,
+        CancellationToken cancellationToken)
     {
-        return ValueTask.CompletedTask;
+        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+        Feedbacks.Add(new DbFeedback
+        {
+            MeetingId = meeting.Id,
+            UserId = source.DbId,
+            Feedback = eventPayloadText?? ""
+        });
+        await UserToMeetings.Where(m=>m.MeetingId == meeting.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
+
+        await SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
     }
 
     private async ValueTask CompleteMeeting(DbMeeting meeting, CancellationToken cancellationToken)
@@ -523,6 +564,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         await using var tx = await Database.BeginTransactionAsync(cancellationToken);
         
         meeting.TypedStatus = DbMeeting.StatusEnum.Finished;
+        
+        await UserToMeetings.Where(m=>m.MeetingId == meeting.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, true), cancellationToken);
         
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -533,6 +577,8 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         await using var tx = await Database.BeginTransactionAsync(cancellationToken);
         
         meeting.TypedStatus = DbMeeting.StatusEnum.Cancelled;
+        await UserToMeetings.Where(m=>m.MeetingId == meeting.Id).ExecuteUpdateAsync(
+            um=>um.SetProperty(i => i.FeedbackAvailable, true), cancellationToken);
         
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
@@ -544,6 +590,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             join u in Users on um.UserId equals u.Id
             join m in Meetings on um.MeetingId equals m.Id 
             where u.TgUserId == user.Id && u.ChatId == chat.Id 
+            orderby m.CreatedAt descending
                                         // && m.Status == 1
             select m;
         
@@ -558,7 +605,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             join um in UserToMeetings on m.Id equals um.MeetingId 
             join u in Users on um.UserId equals u.Id
             where m.Id == meeting.Id
-                select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId), u.Id);
+                select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId, um.FeedbackAvailable), u.Id);
         var users = await usersQuery.ToListAsync(cancellationToken);
         var source = users.First(u=>u.MeetingUser.ChatId == chat.Id);
         var rest = users.Where(u => u.MeetingUser.ChatId != chat.Id);
@@ -573,6 +620,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             join m in Meetings on um.MeetingId equals m.Id 
             where u.ChatId == chatId 
                   // && m.Status == 1
+            orderby m.CreatedAt descending
             select m;
         
         var meeting = await currentMeeting.FirstOrDefaultAsync(cancellationToken);
@@ -586,7 +634,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             join um in UserToMeetings on m.Id equals um.MeetingId 
             join u in Users on um.UserId equals u.Id
             where m.Id == meeting.Id
-            select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId), u.Id);
+            select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId, um.FeedbackAvailable), u.Id);
         var users = await usersQuery.ToListAsync(cancellationToken);
         var source = users.First(u=>u.MeetingUser.ChatId == chatId);
         var rest = users.Where(u => u.MeetingUser.ChatId != chatId);

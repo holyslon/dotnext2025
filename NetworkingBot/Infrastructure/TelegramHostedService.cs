@@ -26,7 +26,7 @@ public class TelegramHostedService(ILogger<TelegramHostedService> logger,
             }
             else
             {
-
+                await bot.SetWebhook("", cancellationToken: stoppingToken);
                 await bot.ReceiveAsync(updateHandler, cancellationToken: stoppingToken);
             }
         }

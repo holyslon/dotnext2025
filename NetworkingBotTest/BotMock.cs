@@ -16,6 +16,12 @@ public class BotMock(ITestOutputHelper output) : ITelegramBotClient, IClassFixtu
     private readonly List<object> _requests = [];
     private readonly SendPoolAssert _sendPoolAssert = new(output);
 
+    public void Clear()
+    {
+        _requests.Clear();
+        _sendPoolAssert.Clear();
+    }
+
     public Task<TResponse> SendRequest<TResponse>(IRequest<TResponse> request,
         CancellationToken cancellationToken = new())
     {
@@ -221,6 +227,11 @@ public class BotMock(ITestOutputHelper output) : ITelegramBotClient, IClassFixtu
         {
             _inlineKeyboardButtons.Add(inlineButton);
             return this;
+        }
+
+        public void Clear()
+        {
+            _requests.Clear();
         }
     }
 

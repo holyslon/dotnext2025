@@ -108,8 +108,7 @@ public interface IMeetingBackend
 
 public class Meeting(IMeetingBackend backend)
 {
-    public record User(Domain.User.LinkData LinkData, long ChatId);
-    
+    public record User(Domain.User.LinkData LinkData, long ChatId, bool FeedbackAvailible);
     public User One => backend.One;
     public User Another => backend.Another;
 

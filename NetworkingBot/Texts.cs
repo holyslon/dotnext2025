@@ -96,7 +96,7 @@ public static class Texts
 
     public static string MeetingCompleted(ReadyForMeeting readyForMeeting, PostponeCommand postpone)
     {
-        return $"Встреча закончена. Если готов к следующей, просто нажми {readyForMeeting.Text.Bold().Quoted()}. Если не готов пока общаться, нажми {postpone.Text.Bold().Quoted()}. Так же я буду тебе очень благодарен, если ты оставишь обратную связь по встрече. Ты можешь просто написать сообщение и я все увижу :)";
+        return $"Встреча закончена. Если готов к следующей, просто нажми {readyForMeeting.Text.Bold().Quoted()}. Если не готов пока общаться, нажми {postpone.Text.Bold().Quoted()}. Так же я буду тебе очень благодарен, если ты оставишь обратную связь по встрече. Ты можешь просто написать сообщение и я все увижу ☺️";
     }
     public static string ThankYouForFeedBack(ReadyForMeeting readyForMeeting, PostponeCommand postpone)
     {

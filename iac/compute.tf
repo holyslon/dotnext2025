@@ -74,7 +74,7 @@ locals {
       NETWORKINGBOT_Leaderboard__BucketName = resource.yandex_storage_bucket.data.bucket
       NETWORKINGBOT_App__UpdateSecretToken  = resource.random_password.tg_callback_token.result
       ConnectionStrings__PG                 = local.connection_string
-      App__BaseUrl                          = "https://${local.full_domain}"
+      App__BaseUrl                          = "http://localhost"
       ASPNETCORE_ENVIRONMENT                = "Production"
       ASPNETCORE_URLS                       = "http://0.0.0.0:80"
     }

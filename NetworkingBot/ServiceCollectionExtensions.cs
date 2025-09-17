@@ -1,5 +1,7 @@
 
 using Amazon.S3;
+using Medallion.Threading;
+using Medallion.Threading.Postgres;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -64,6 +66,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RecyclableMemoryStreamManager>();
         
         services.AddTransient<AmazonS3Client>(sp => new AmazonS3Client(sp.GetRequiredService<IOptionsSnapshot<AmazonS3Config>>().Value));
+        services.AddSingleton<IDistributedLockProvider>(_ =>
+            new PostgresDistributedSynchronizationProvider(connectionString));
 
         return services;
     }
