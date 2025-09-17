@@ -9,7 +9,7 @@ internal class MeetingCanceledCommandHandler(ILogger<MeetingCanceledCommand> log
     : MeetingUniversalCommandHandler<MeetingCanceledCommand>(logger, meetingStorage)
 {
 
-    protected override async ValueTask Handle(ITelegramBotClient bot, CancellationToken cancellationToken, Meeting meeting, long sourceChatId)
+    protected override async ValueTask<bool> Handle(ITelegramBotClient bot, CancellationToken cancellationToken, Meeting meeting, long sourceChatId)
     {
         await meeting.Cancel(cancellationToken);
         
@@ -31,6 +31,7 @@ internal class MeetingCanceledCommandHandler(ILogger<MeetingCanceledCommand> log
                 Commands.Commands.Postpone.Button(meeting.Another.ChatId)
             ),
             cancellationToken: cancellationToken);
+        return true;
         
     }
 }

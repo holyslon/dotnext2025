@@ -300,8 +300,8 @@ public class BotMock(ITestOutputHelper output) : ITelegramBotClient, IClassFixtu
                     output.Write(FormatRequest(req));
                     return false;
                 }
-
-                if (_parseMode.HasValue && _parseMode.Value != sendMessageRequest.ParseMode)
+                var parseMode = _parseMode ?? ParseMode.Html;
+                if (parseMode != sendMessageRequest.ParseMode)
                 {
                     output.WriteLine("");
                     output.WriteLine($"ParseMode not match '{_parseMode.Value}'");

@@ -4,5 +4,5 @@ namespace NetworkingBot;
 
 internal interface ITelegramEventHandler<in T>
 {
-    ValueTask OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken);
+    ValueTask<bool> OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken);
 }

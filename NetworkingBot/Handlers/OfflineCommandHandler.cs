@@ -13,7 +13,7 @@ internal class OfflineCommandHandler(
     IConversationTopicStorage topicStorage,
     IPollStorage pollStorage) : UserUniversalCommandHandler<OfflineCommand>(logger, userStorage)
 {
-    protected override async ValueTask Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
+    protected override async ValueTask<bool> Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
         Domain.User domainUser, long chatId)
     {
         domainUser.OfflineParticipation();
@@ -27,5 +27,6 @@ internal class OfflineCommandHandler(
             await pollStorage.Save(domainUser, response.Poll.Id,
                 [..response.Poll.Options.Index().Select(i => topicStorageTopics[i.Index])], cancellationToken);
         }
+        return true;
     }
 }

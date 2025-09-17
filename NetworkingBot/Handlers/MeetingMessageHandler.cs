@@ -7,38 +7,42 @@ namespace NetworkingBot.Handlers;
 
 internal class MeetingMessageHandler(IMeetingStorage meetingStorage, ILogger<MeetingMessageHandler> logger) : ITelegramEventHandler<Message>
 {
-    public async ValueTask OnEvent(ITelegramBotClient bot, Message eventPayload, CancellationToken cancellationToken)
+    public async ValueTask<bool> OnEvent(ITelegramBotClient bot, Message eventPayload, CancellationToken cancellationToken)
     {
         using var _ = logger.BeginScope(new { eventPayload });
         if (eventPayload.From == null)
         {
             logger.LogError("From is null");
-            return;
+            return false;
         }
-        await meetingStorage.WithMeetingForUser(eventPayload.Chat, eventPayload.From, async meeting =>
+        return await meetingStorage.WithMeetingForUser(eventPayload.Chat, eventPayload.From, async meeting =>
         {
             if (meeting.InProgress)
             {
                 foreach (var otherUser in meeting.OtherUsers)
                 {
-                    await bot.SendMessage(otherUser.ChatId, Texts.MessageFromUser.Text(meeting.Source.LinkData, eventPayload.Text), Texts.MessageFromUser.ParseMode, cancellationToken: cancellationToken);
+                    await bot.SendMessage(otherUser.ChatId, 
+                        Texts.MessageFromUser.Text(meeting.Source.LinkData, eventPayload.Text), 
+                        Texts.MessageFromUser.ParseMode, 
+                        cancellationToken: cancellationToken);
                 }
             }
+            return true;
         }, cancellationToken);
     }
 }
 
 internal class MeetingFeedbackMessageHandler(IMeetingStorage meetingStorage, ILogger<MeetingFeedbackMessageHandler> logger) : ITelegramEventHandler<Message>
 {
-    public async ValueTask OnEvent(ITelegramBotClient bot, Message eventPayload, CancellationToken cancellationToken)
+    public async ValueTask<bool> OnEvent(ITelegramBotClient bot, Message eventPayload, CancellationToken cancellationToken)
     {
         using var _ = logger.BeginScope(new { eventPayload });
         if (eventPayload.From == null)
         {
             logger.LogError("From is null");
-            return;
+            return false;
         }
-        await meetingStorage.WithMeetingForUser(eventPayload.Chat, eventPayload.From, async meeting =>
+        return await meetingStorage.WithMeetingForUser(eventPayload.Chat, eventPayload.From, async meeting =>
         {
             if (meeting.IsCompleted)
             {
@@ -52,6 +56,7 @@ internal class MeetingFeedbackMessageHandler(IMeetingStorage meetingStorage, ILo
                         Commands.Commands.Postpone.Button(eventPayload.Chat.Id)
                     ), cancellationToken: cancellationToken);
             }
+            return true;
         }, cancellationToken);
     }
 }

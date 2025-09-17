@@ -4,6 +4,7 @@ using NetworkingBot.Commands;
 using NetworkingBot.Infrastructure;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace NetworkingBot.Handlers;
@@ -15,7 +16,7 @@ internal class ConversationTopicPoolResponse(
     IMatchService matchService, 
     IOptionsSnapshot<ServiceCollectionExtensions.AppOptions> appOptions) : ITelegramEventHandler<Poll>
 {
-    public async ValueTask OnEvent(ITelegramBotClient bot, Poll eventPayload, CancellationToken cancellationToken)
+    public async ValueTask<bool> OnEvent(ITelegramBotClient bot, Poll eventPayload, CancellationToken cancellationToken)
     {
         using var _ = logger.BeginScope(new { eventPayload.Id });
         var domainPoll = await pollStorage.GetById(eventPayload.Id, cancellationToken);
@@ -31,6 +32,7 @@ internal class ConversationTopicPoolResponse(
         var id = domainUser.Id;
 
         await bot.SendMessage(id.ChatId, Texts.WaitForNextMatch(Commands.Commands.Postpone),
+            parseMode: ParseMode.Html,
             replyMarkup: new InlineKeyboardMarkup(Commands.Commands.Postpone.Button(id.ChatId)),
             cancellationToken: cancellationToken);
 
@@ -62,5 +64,6 @@ internal class ConversationTopicPoolResponse(
                     cancellationToken: cancellationToken);
             }
         }
+        return true;
     }
 }

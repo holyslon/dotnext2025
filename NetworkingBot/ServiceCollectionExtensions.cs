@@ -75,7 +75,7 @@ public static class ServiceCollectionExtensions
         IServiceProvider serviceProvider,
         CompositeEventHandlerConfig<T> config) : ITelegramEventHandler<T>
     {
-        public async ValueTask OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken)
+        public async ValueTask<bool> OnEvent(ITelegramBotClient bot, T eventPayload, CancellationToken cancellationToken)
         {
             foreach (var configHandler in config.Handlers)
             {
@@ -94,10 +94,12 @@ public static class ServiceCollectionExtensions
                 }
                 catch (Exception e)
                 {
-                    logger.LogError(e, "Fail to find handler in di");
+                    logger.LogError(e, "Fail to handle event");
                 }
-
+                
             }
+
+            return true;
         }
     }
 

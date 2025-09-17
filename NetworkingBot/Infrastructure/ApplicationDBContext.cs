@@ -252,7 +252,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         return new User(await UserBackend.Create(dbUser, this, cancellationToken));
     }
 
-    public async ValueTask WithCreateOrGetUser(Chat chat, Telegram.Bot.Types.User user, Func<User, ValueTask> action,
+    public async ValueTask<bool> WithCreateOrGetUser(Chat chat, Telegram.Bot.Types.User user, Func<User, ValueTask<bool>> action,
         CancellationToken cancellationToken = default)
     {
         var chatId = chat.Id;
@@ -276,12 +276,13 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
 
         var domainUser = new User(await UserBackend.Create(dbUser, this, cancellationToken));
 
-        await action(domainUser);
+        var res = await action(domainUser);
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
+        return res;
     }
 
-    public async ValueTask WithGetUser(long chatId, Func<User, ValueTask> action,
+    public async ValueTask<bool> WithGetUser(long chatId, Func<User, ValueTask<bool>> action,
         CancellationToken cancellationToken = default)
     {
         await using var tx = await Database.BeginTransactionAsync(cancellationToken);
@@ -290,14 +291,16 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         if (dbUser == null) throw new IUserStorage.UserNotFound(chatId);
         var domainUser = new User(await UserBackend.Create(dbUser, this, cancellationToken));
 
-        await action(domainUser);
+        var res = await action(domainUser);
         await SaveChangesAsync(cancellationToken);
         await tx.CommitAsync(cancellationToken);
+        return res;
     }
 
-    public async ValueTask Save(User domainPoll, CancellationToken cancellationToken = default)
+    public async ValueTask<bool> Save(User domainPoll, CancellationToken cancellationToken = default)
     {
         await SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     public async ValueTask<IReadOnlyList<ConversationTopic>> GetTopics(CancellationToken cancellationToken = default)
@@ -535,7 +538,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         await tx.CommitAsync(cancellationToken);
     }
 
-    public async ValueTask WithMeetingForUser(Chat chat, Telegram.Bot.Types.User user, Func<Meeting, ValueTask> action, CancellationToken cancellationToken)
+    public async ValueTask<bool> WithMeetingForUser(Chat chat, Telegram.Bot.Types.User user, Func<Meeting, ValueTask<bool>> action, CancellationToken cancellationToken)
     {
         var currentMeeting = from um in UserToMeetings
             join u in Users on um.UserId equals u.Id
@@ -549,7 +552,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             using var _ = logger.BeginScope(new { chat, user });
             logger.LogInformation("meeting not found");
-            return;
+            return false;
         }
         var usersQuery = from m in Meetings
             join um in UserToMeetings on m.Id equals um.MeetingId 
@@ -560,10 +563,10 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         var source = users.First(u=>u.MeetingUser.ChatId == chat.Id);
         var rest = users.Where(u => u.MeetingUser.ChatId != chat.Id);
         var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), source, [..rest], this));
-        await action(domain);
+        return await action(domain);
     }
 
-    public async ValueTask WithMeetingForChat(long chatId, Func<Meeting, ValueTask> action, CancellationToken cancellationToken)
+    public async ValueTask<bool> WithMeetingForChat(long chatId, Func<Meeting, ValueTask<bool>> action, CancellationToken cancellationToken)
     {
         var currentMeeting = from um in UserToMeetings
             join u in Users on um.UserId equals u.Id
@@ -577,7 +580,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             using var _ = logger.BeginScope(new { chatId });
             logger.LogInformation("meeting not found");
-            return;
+            return false;
         }
         var usersQuery = from m in Meetings
             join um in UserToMeetings on m.Id equals um.MeetingId 
@@ -588,6 +591,6 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         var source = users.First(u=>u.MeetingUser.ChatId == chatId);
         var rest = users.Where(u => u.MeetingUser.ChatId != chatId);
         var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(),source, [..rest],  this));
-        await action(domain);
+        return await action(domain);
     }
 }

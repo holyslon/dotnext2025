@@ -8,7 +8,7 @@ namespace NetworkingBot.Handlers;
 internal class MeetingHappenCommandHandler(ILogger<MeetingHappenCommand> logger, IMeetingStorage meetingStorage)
     : MeetingUniversalCommandHandler<MeetingHappenCommand>(logger, meetingStorage)
 {
-    protected override async ValueTask Handle(ITelegramBotClient bot, CancellationToken cancellationToken, Meeting meeting, long sourceChatId)
+    protected override async ValueTask<bool> Handle(ITelegramBotClient bot, CancellationToken cancellationToken, Meeting meeting, long sourceChatId)
     {
         await meeting.Completed(cancellationToken);
         await bot.SendMessage(meeting.One.ChatId, Texts.MeetingCompleted(
@@ -30,6 +30,6 @@ internal class MeetingHappenCommandHandler(ILogger<MeetingHappenCommand> logger,
                 Commands.Commands.Postpone.Button(meeting.Another.ChatId)
             ),
             cancellationToken: cancellationToken);
-
+        return true;
     }
 }
