@@ -129,6 +129,25 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
             .WithInlineCallback(Commands.Postpone)
             .WasSend();
     }
+    [Fact]
+    public async Task TestThatWhenWeReturnWeReadyToMatch()
+    {
+        await UpdateHandler.Update(Create.Message("/start"));
+
+        await UpdateHandler.Update(callback: Commands.Join.CallbackQuery());
+        await UpdateHandler.Update(callback: Commands.Offline.CallbackQuery());
+        await UpdateHandler.Update(poll: Create.Poll(BotClient.Pool().LastPollId,
+            BotClient.Pool().LastPollOption.Vote(Interests.PostgresSql)));
+        await UpdateHandler.Update(callback: Commands.Postpone.CallbackQuery());
+        BotClient.Clear();
+        await UpdateHandler.Update(message: Create.Message(Commands.ReadyForMeeting.SlashCommand()));
+
+
+        BotClient.Message().ForChat(Default.ChatId)
+            .WithText(Texts.WaitForNextMatch(Commands.Postpone))
+            .WithInlineCallback(Commands.Postpone)
+            .WasSend();
+    }
 
     [Fact]
     public async Task TestThatWheCanMatch()

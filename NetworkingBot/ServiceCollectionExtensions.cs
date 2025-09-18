@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
                 .Add<MeetingMessageHandler>()
                 .Add<MeetingFeedbackMessageHandler>()
                 .Add<JustWatchingCommandHandler>()
+                .Add<ReadyForMeetingCommand>()
                 .Add<PostponeCommandHandler>());
         services.AddTelegramEventHandlers<CallbackQuery>(opts =>
             opts.Add<JoinCommandHandler>()
