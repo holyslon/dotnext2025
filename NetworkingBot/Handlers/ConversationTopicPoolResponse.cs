@@ -27,43 +27,47 @@ internal class ConversationTopicPoolResponse(
 
         var domainUser = domainPoll.DomainUser;
         domainUser.SetConversationTopics(topics);
-        domainUser.ReadyToParticipate();
-        await userStorage.Save(domainUser, cancellationToken);
-        var id = domainUser.Id;
-
-        await bot.SendMessage(id.ChatId, Texts.WaitForNextMatch(Commands.Commands.Postpone),
-            parseMode: ParseMode.Html,
-            replyMarkup: new InlineKeyboardMarkup(Commands.Commands.Postpone.Button(id.ChatId)),
-            cancellationToken: cancellationToken);
-
-        if (domainUser.TryGetSearchInfo(out var info))
+        if (domainUser.TryReadyToParticipate())
         {
-            var (found, match) = await matchService.TryFindMatch(info, cancellationToken);
-            if (found && match != null)
+            await userStorage.Save(domainUser, cancellationToken);
+            var id = domainUser.Id;
+
+            await bot.SendMessage(id.ChatId, Texts.WaitForNextMatch(Commands.Commands.Postpone),
+                parseMode: ParseMode.Html,
+                replyMarkup: new InlineKeyboardMarkup(Commands.Commands.Postpone.Button(id.ChatId)),
+                cancellationToken: cancellationToken);
+
+            if (domainUser.TryGetSearchInfo(out var info))
             {
-                var baseUrl = appOptions.Value.BaseUrl;
-                await bot.SendMessage(match.One.ChatId, Texts.MatchMessage.Text(baseUrl,
-                        match.Another.LinkData,
-                        Commands.Commands.MeetingHappenCommand,
-                        Commands.Commands.MeetingCanceledCommand),
-                    Texts.MatchMessage.ParseMode,
-                    replyMarkup: new InlineKeyboardMarkup(
-                        Commands.Commands.MeetingHappenCommand.Button(match.One.ChatId),
-                        Commands.Commands.MeetingCanceledCommand.Button(match.One.ChatId)
-                    ),
-                    cancellationToken: cancellationToken);
-                await bot.SendMessage(match.Another.ChatId, Texts.MatchMessage.Text(baseUrl,
-                    match.One.LinkData,
-                        Commands.Commands.MeetingHappenCommand,
-                        Commands.Commands.MeetingCanceledCommand),
-                    Texts.MatchMessage.ParseMode,
-                    replyMarkup: new InlineKeyboardMarkup(
-                        Commands.Commands.MeetingHappenCommand.Button(match.Another.ChatId),
-                        Commands.Commands.MeetingCanceledCommand.Button(match.Another.ChatId)
-                    ),
-                    cancellationToken: cancellationToken);
+                var (found, match) = await matchService.TryFindMatch(info, cancellationToken);
+                if (found && match != null)
+                {
+                    var baseUrl = appOptions.Value.BaseUrl;
+                    await bot.SendMessage(match.One.ChatId, Texts.MatchMessage.Text(baseUrl,
+                            match.Another.LinkData,
+                            Commands.Commands.MeetingHappenCommand,
+                            Commands.Commands.MeetingCanceledCommand),
+                        Texts.MatchMessage.ParseMode,
+                        replyMarkup: new InlineKeyboardMarkup(
+                            Commands.Commands.MeetingHappenCommand.Button(match.One.ChatId),
+                            Commands.Commands.MeetingCanceledCommand.Button(match.One.ChatId)
+                        ),
+                        cancellationToken: cancellationToken);
+                    await bot.SendMessage(match.Another.ChatId, Texts.MatchMessage.Text(baseUrl,
+                            match.One.LinkData,
+                            Commands.Commands.MeetingHappenCommand,
+                            Commands.Commands.MeetingCanceledCommand),
+                        Texts.MatchMessage.ParseMode,
+                        replyMarkup: new InlineKeyboardMarkup(
+                            Commands.Commands.MeetingHappenCommand.Button(match.Another.ChatId),
+                            Commands.Commands.MeetingCanceledCommand.Button(match.Another.ChatId)
+                        ),
+                        cancellationToken: cancellationToken);
+                }
             }
+
+            return true;
         }
-        return true;
+        return false;
     }
 }

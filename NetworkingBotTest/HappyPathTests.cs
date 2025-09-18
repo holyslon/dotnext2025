@@ -49,9 +49,9 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
         await UpdateHandler.HandleUpdateAsync(Create.Update(Create.Message("/start")));
 
         BotClient.Message().ForChat(Default.ChatId)
-            .WithText(Texts.Welcome(Commands.Join, Commands.Postpone))
+            .WithText(Texts.Welcome(Commands.Join, Commands.JustWatching))
             .WithInlineCallback(Commands.Join)
-            .WithInlineCallback(Commands.Postpone)
+            .WithInlineCallback(Commands.JustWatching)
             .WasSend();
     }
 
@@ -59,7 +59,7 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
     public async Task TestThatWeSendMessageIfUserPostpone()
     {
         await UpdateHandler.HandleUpdateAsync(Create.Update(Create.Message("/start")));
-        await UpdateHandler.Update(callback: Commands.Postpone.CallbackQuery());
+        await UpdateHandler.Update(callback: Commands.JustWatching.CallbackQuery());
 
         BotClient.Message().ForChat(Default.ChatId)
             .WithText(Texts.WaitingForYouToReturn(Commands.Join))
@@ -195,6 +195,33 @@ public class HappyPathTests : IAsyncDisposable, IDisposable
 
         var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
 
+
+        BotClient.Message().ForChat(firstChat)
+            .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, firstChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, firstChat)
+            .WasSend();
+
+        BotClient.Message().ForChat(secondChat)
+            .WithText(Texts.MatchMessage.Text(BaseUrl, firstUser.LinkData(), Commands.MeetingHappenCommand,
+                Commands.MeetingCanceledCommand))
+            .WithParseMode(Texts.MatchMessage.ParseMode)
+            .WithInlineCallback(Commands.MeetingHappenCommand, secondChat)
+            .WithInlineCallback(Commands.MeetingCanceledCommand, secondChat)
+            .WasSend();
+    }
+    [Fact]
+    public async Task TestThatWheCanMatchWithExistingAfterNewReadyForMeeting()
+    {
+        var (firstUser, firstChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+
+        await UpdateHandler.Update(callback: Commands.MeetingHappenCommand.CallbackQuery(firstChat));
+        var (secondUser, secondChat) = await UpdateHandler.OnlineUser(Interests.PostgresSql, Interests.Async);
+        await UpdateHandler.Update(callback: Commands.ReadyForMeeting.CallbackQuery(firstChat));
+        
 
         BotClient.Message().ForChat(firstChat)
             .WithText(Texts.MatchMessage.Text(BaseUrl, secondUser.LinkData(), Commands.MeetingHappenCommand,

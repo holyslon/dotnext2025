@@ -10,16 +10,18 @@ internal class JoinCommandHandler(ILogger<JoinCommand> logger, IUserStorage user
     : UserUniversalCommandHandler<JoinCommand>(logger, userStorage)
 {
     protected override async ValueTask<bool> Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
-        Domain.User domainUser, long chatId)
+        Domain.IUser domainUser, long chatId)
     {
-        domainUser.OptIn();
-
-        await botClient.SendMessage(chatId,
-            Texts.ChooseOnlineOrOffline(Commands.Commands.Online, Commands.Commands.Offline),
-            parseMode: ParseMode.Html,
-            replyMarkup: new InlineKeyboardMarkup(Commands.Commands.Online.Button(chatId),
-                Commands.Commands.Offline.Button(chatId)),
-            cancellationToken: cancellationToken);
-        return true;
+        if (domainUser.TryOptIn())
+        {
+            await botClient.SendMessage(chatId,
+                Texts.ChooseOnlineOrOffline(Commands.Commands.Online, Commands.Commands.Offline),
+                parseMode: ParseMode.Html,
+                replyMarkup: new InlineKeyboardMarkup(Commands.Commands.Online.Button(chatId),
+                    Commands.Commands.Offline.Button(chatId)),
+                cancellationToken: cancellationToken);
+            return true;
+        }
+        return false;
     }
 }

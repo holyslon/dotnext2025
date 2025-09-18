@@ -4,5 +4,5 @@ namespace NetworkingBot.Infrastructure;
 
 internal interface IMatchService
 {
-    ValueTask<(bool, Meeting? meeting)> TryFindMatch(User.SearchInfo searchInfo, CancellationToken cancellationToken);
+    ValueTask<(bool, IMeeting? meeting)> TryFindMatch(IUser.SearchInfo searchInfo, CancellationToken cancellationToken);
 }

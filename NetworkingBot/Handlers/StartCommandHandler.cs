@@ -22,10 +22,10 @@ internal class StartCommandHandler(ILogger<StartCommandHandler> logger, IUserSto
 
        return await userStorage.WithCreateOrGetUser(chat, user, async _ =>
         {
-            await botClient.SendMessage(chat.Id, Texts.Welcome(Commands.Commands.Join, Commands.Commands.Postpone),
+            await botClient.SendMessage(chat.Id, Texts.Welcome(Commands.Commands.Join, Commands.Commands.JustWatching),
                 parseMode: ParseMode.Html,
                 replyMarkup: new InlineKeyboardMarkup(Commands.Commands.Join.Button(chat.Id),
-                    Commands.Commands.Postpone.Button(chat.Id)),
+                    Commands.Commands.JustWatching.Button(chat.Id)),
                 cancellationToken: cancellationToken);
             return true;
         }, cancellationToken);

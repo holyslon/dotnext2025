@@ -22,7 +22,7 @@ namespace NetworkingBot.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbConversationTopic", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbConversationTopic", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -39,7 +39,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("Topics");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbFeedback", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbFeedback", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -66,7 +66,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("Feedbacks");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbMeeting", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbMeeting", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -85,7 +85,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("Meetings");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbPool", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbPool", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -109,7 +109,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("Pools");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbPoolToDbTopic", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbPoolToDbTopic", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -133,7 +133,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("PoolsTopics");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbUser", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbUser", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -162,7 +162,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbUserToDbTopic", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbUserToDbTopic", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -183,7 +183,7 @@ namespace NetworkingBot.Migrations
                     b.ToTable("UserToTopics");
                 });
 
-            modelBuilder.Entity("NetworkingBot.Infrastructure.DbUserToMeeting", b =>
+            modelBuilder.Entity("NetworkingBot.Infrastructure.DbModels.DbUserToMeeting", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()

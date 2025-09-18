@@ -14,19 +14,22 @@ internal class OfflineCommandHandler(
     IPollStorage pollStorage) : UserUniversalCommandHandler<OfflineCommand>(logger, userStorage)
 {
     protected override async ValueTask<bool> Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
-        Domain.User domainUser, long chatId)
+        Domain.IUser domainUser, long chatId)
     {
-        domainUser.OfflineParticipation();
-
-        var topicStorageTopics = await topicStorage.GetTopics(cancellationToken);
-        var response = await botClient.SendPoll(chatId, Texts.ChooseYourInterests(),
-            [..topicStorageTopics.Select(t => new InputPollOption(t.Name))], allowsMultipleAnswers: true,
-            cancellationToken: cancellationToken);
-        if (response.Poll != null)
+        if (domainUser.TryOfflineParticipation())
         {
-            await pollStorage.Save(domainUser, response.Poll.Id,
-                [..response.Poll.Options.Index().Select(i => topicStorageTopics[i.Index])], cancellationToken);
+            var topicStorageTopics = await topicStorage.GetTopics(cancellationToken);
+            var response = await botClient.SendPoll(chatId, Texts.ChooseYourInterests(),
+                [..topicStorageTopics.Select(t => new InputPollOption(t.Name))], allowsMultipleAnswers: true,
+                cancellationToken: cancellationToken);
+            if (response.Poll != null)
+            {
+                await pollStorage.Save(domainUser, response.Poll.Id,
+                    [..response.Poll.Options.Index().Select(i => topicStorageTopics[i.Index])], cancellationToken);
+            }
+
+            return true;
         }
-        return true;
+        return false;
     }
 }

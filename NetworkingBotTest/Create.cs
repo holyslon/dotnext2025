@@ -98,9 +98,9 @@ internal static class Create
     }
 
 
-    internal static NetworkingBot.Domain.User.LinkData LinkData(this User user)
+    internal static NetworkingBot.Domain.IUser.LinkData LinkData(this User user)
     {
-        return new NetworkingBot.Domain.User.LinkData(user.Id, user.Username ?? user.FirstName);
+        return new NetworkingBot.Domain.IUser.LinkData(user.Id, user.Username ?? user.FirstName);
     }
 
     internal static async ValueTask<(User, Chat)> OnlineUser(this UpdateHandlerAndBot updateHandler,

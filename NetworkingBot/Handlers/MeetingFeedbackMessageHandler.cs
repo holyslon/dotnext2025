@@ -19,17 +19,20 @@ internal class MeetingFeedbackMessageHandler(IMeetingStorage meetingStorage, ILo
         {
             if (meeting.IsCompleted && meeting.Source.FeedbackAvailible)
             {
-                await meeting.SubmitFeedback(eventPayload.Text, cancellationToken);
-                await bot.SendMessage(eventPayload.Chat.Id, Texts.ThankYouForFeedBack(
-                        Commands.Commands.ReadyForMeeting,
-                        Commands.Commands.Postpone),
-                    Texts.MatchMessage.ParseMode,
-                    replyMarkup: new InlineKeyboardMarkup(
-                        Commands.Commands.ReadyForMeeting.Button(eventPayload.Chat.Id),
-                        Commands.Commands.Postpone.Button(eventPayload.Chat.Id)
-                    ), cancellationToken: cancellationToken);
+                if (await meeting.TrySubmitFeedback(eventPayload.Text, cancellationToken))
+                {
+                    await bot.SendMessage(eventPayload.Chat.Id, Texts.ThankYouForFeedBack(
+                            Commands.Commands.ReadyForMeeting,
+                            Commands.Commands.Postpone),
+                        Texts.MatchMessage.ParseMode,
+                        replyMarkup: new InlineKeyboardMarkup(
+                            Commands.Commands.ReadyForMeeting.Button(eventPayload.Chat.Id),
+                            Commands.Commands.Postpone.Button(eventPayload.Chat.Id)
+                        ), cancellationToken: cancellationToken);
+                    return true;
+                }
             }
-            return true;
+            return false;
         }, cancellationToken);
     }
 }

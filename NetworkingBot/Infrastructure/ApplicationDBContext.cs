@@ -1,117 +1,12 @@
 using System.Collections.Immutable;
-using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using NetworkingBot.Domain;
 using NetworkingBot.Handlers;
+using NetworkingBot.Infrastructure.DbModels;
 using Telegram.Bot.Types;
 using Poll = NetworkingBot.Domain.Poll;
-using User = NetworkingBot.Domain.User;
 
 namespace NetworkingBot.Infrastructure;
-
-internal class DbUser
-{
-    public long Id { get; set; }
-    public required string Username { get; set; }
-    public required long TgUserId { get; set; }
-    public required long ChatId { get; set; }
-    public required int State { get; set; }
-    public required int ParticipationMode { get; set; }
-}
-
-internal class DbMeeting
-{
-    public long Id { get; set; }
-    public required int Status { get; set; }
-    public required DateTime CreatedAt { get; set; }
-    [NotMapped]
-    public StatusEnum TypedStatus
-    {
-        get => Status switch
-        {
-            1 => StatusEnum.Current,
-            2 => StatusEnum.Cancelled,
-            3 => StatusEnum.Finished,
-            _ => StatusEnum.Unknown,
-        };
-        set
-        {
-            Status = value switch
-            {
-                StatusEnum.Unknown => 0,
-                StatusEnum.Current => 1,
-                StatusEnum.Cancelled => 2,
-                StatusEnum.Finished => 3,
-                _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
-            };
-        }
-    }
-
-    internal enum StatusEnum
-    {
-        Unknown,
-        Current,
-        Cancelled,
-        Finished
-    }
-}
-
-internal class DbUserToMeeting
-{
-    public long Id { get; set; }
-    public required long UserId { get; set; }
-    public required long MeetingId { get; set; }
-    
-    public required bool FeedbackAvailable { get; set; }
-}
-
-internal class DbConversationTopic
-{
-    public long Id { get; set; }
-    public required string Name { get; set; }
-}
-
-[Index(nameof(UserId))]
-internal class DbUserToDbTopic
-{
-    public long Id { get; set; }
-    public required long UserId { get; set; }
-    public required long TopicId { get; set; }
-}
-
-[Index(nameof(UserId))]
-[Index(nameof(MeetingId))]
-internal class DbFeedback
-{
-    public long Id { get; set; }
-    public required long UserId { get; set; }
-    public required long MeetingId { get; set; }
-    public required string Feedback { get; set; }
-}
-
-
-[Index(nameof(UserId))]
-[Index(nameof(ExternalId))]
-internal class DbPool
-{
-    public long Id { get; set; }
-    public required long UserId { get; set; }
-    public required string ExternalId { get; set; }
-}
-
-[Index(nameof(PoolId))]
-internal class DbPoolToDbTopic
-{
-    public long Id { get; set; }
-    public required long PoolId { get; set; }
-    public required long TopicId { get; set; }
-    public required int Index { get; set; }
-}
-
-public interface IApplicationClearer
-{
-    public ValueTask Clear(CancellationToken cancellationToken = default);
-}
 
 internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ILogger<ApplicationDbContext> logger)
     : DbContext(options), IUserStorage, IConversationTopicStorage, IPollStorage, IMatchService, IApplicationClearer, IMeetingStorage
@@ -119,8 +14,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
     private class UserBackend(
         DbUser user,
         List<(DbUserToDbTopic, DbConversationTopic)> topics,
-        DbSet<DbUserToDbTopic> userToDbTopics,
-        DbMeeting? meeting) : IUserBackend
+        DbSet<DbUserToDbTopic> userToDbTopics) : IUser
     {
         public DbUser Inner => user;
         public static async ValueTask<UserBackend> Create(DbUser user, ApplicationDbContext context, CancellationToken cancellationToken)
@@ -129,91 +23,31 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
                     join topic in context.Topics on userToTopic.TopicId equals topic.Id
                     where userToTopic.UserId == user.Id
                         select new {userToTopic,topic}).ToListAsync(cancellationToken);
-            
-            var meeting = await (from userToMeeting in context.UserToMeetings
-                join dbMeeting in context.Meetings on userToMeeting.MeetingId equals dbMeeting.Id
-                where dbMeeting.Status == 1 && userToMeeting.UserId == user.Id
-                select dbMeeting).FirstOrDefaultAsync(cancellationToken);
-            return new UserBackend(user,[..topics.Select(i=>(i.userToTopic, i.topic))], context.UserToTopics, meeting);
-        }
-        
-        public bool InMeeting => meeting != null;
-
-        public bool IsActive
-        {
-            get => user.State is 1 or 3;
-            set
-            {
-                if (value)
-                    user.State = user.State switch
-                    {
-                        1 => 1,
-                        2 => 3,
-                        3 => 3,
-                        _ => 1
-                    };
-                else
-                    user.State = user.State switch
-                    {
-                        1 => 0,
-                        2 => 2,
-                        3 => 2,
-                        _ => 1
-                    };
-            }
+            return new UserBackend(user,[..topics.Select(i=>(i.userToTopic, i.topic))], context.UserToTopics);
         }
 
-        public User.ParticipationMode ParticipationMode
+        private IUser.ParticipationMode ParticipationMode
         {
             get => user.ParticipationMode switch
             {
-                0 => User.ParticipationMode.Unknown,
-                1 => User.ParticipationMode.Online,
-                2 => User.ParticipationMode.Offline,
-                _ => User.ParticipationMode.Unknown
+                0 => IUser.ParticipationMode.Unknown,
+                1 => IUser.ParticipationMode.Online,
+                2 => IUser.ParticipationMode.Offline,
+                _ => IUser.ParticipationMode.Unknown
             };
             set
             {
                 user.ParticipationMode = value switch
                 {
-                    User.ParticipationMode.Unknown => 0,
-                    User.ParticipationMode.Online => 1,
-                    User.ParticipationMode.Offline => 2,
+                    IUser.ParticipationMode.Unknown => 0,
+                    IUser.ParticipationMode.Online => 1,
+                    IUser.ParticipationMode.Offline => 2,
                     _ => throw new ArgumentOutOfRangeException(nameof(value), value, null)
                 };
             }
         }
 
-        public bool ReadyToParticipate
-        {
-            get => user.State is 2 or 3;
-            set
-            {
-                if (value)
-                    user.State = user.State switch
-                    {
-                        1 => 3,
-                        2 => 2,
-                        3 => 3,
-                        _ => 2
-                    };
-                else
-                    user.State = user.State switch
-                    {
-                        1 => 1,
-                        2 => 0,
-                        3 => 1,
-                        _ => 0
-                    };
-            }
-        }
-
-        public long UserId => user.TgUserId;
-        public string Name => user.Username;
-        public IReadOnlyCollection<ConversationTopic> Topics => topics.Select(i=>Map(i.Item2)).ToImmutableList();
-        public long ChatId => user.ChatId;
-
-        public void UpdateTopics(ImmutableArray<ConversationTopic> newTopics)
+        private void UpdateTopics(ImmutableArray<ConversationTopic> newTopics)
         {
             var toAdd = newTopics.ExceptBy(
                 topics.Select(t=>t.Item2.Id.ToString()), 
@@ -240,6 +74,84 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
                 userToDbTopics.Remove(valueTuple.Item1);
             }
         }
+
+        public bool TryOptIn()
+        {
+            if (user.State == 0)
+            {
+                user.State = 1;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryOptOut()
+        {
+            if (user.State == 3)
+            {
+                user.State = 1;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryOnlineParticipation()
+        {
+            if (user.ParticipationMode != (int)IUser.ParticipationMode.Online)
+            {
+                user.ParticipationMode = (int)IUser.ParticipationMode.Online;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryOfflineParticipation()
+        {
+            if (user.ParticipationMode != (int)IUser.ParticipationMode.Offline)
+            {
+                user.ParticipationMode = (int)IUser.ParticipationMode.Offline;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryReadyToParticipate()
+        {
+            if (user.State == 1)
+            {
+                user.State = 3;
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryGetSearchInfo(out IUser.SearchInfo searchInfo)
+        {
+            if (user.State == 3)
+            {
+                searchInfo = new IUser.SearchInfo(user.TgUserId, user.Username, topics.Select(i=>Map(i.Item2)).ToImmutableList(), ParticipationMode);
+                return true;
+            }
+
+            searchInfo = IUser.SearchInfo.Empty;
+            return false;
+        }
+
+        public void SetConversationTopics(ImmutableArray<ConversationTopic> topics)
+        {
+            UpdateTopics(topics);
+        }
+
+        public IUser.IdType Id => new(user.ChatId, user.TgUserId);
+        public IUser.LinkData Link => new(user.TgUserId, user.Username);
+        public bool TryJustWatch()
+        {
+            if (user.State == 0)
+            {
+                return true;
+            }
+            return false;
+        }
     }
 
     public required DbSet<DbUser> Users { get; set; }
@@ -257,16 +169,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
     }
 
 
-    public async ValueTask<User> GetUserAsync(long userId, CancellationToken cancellationToken)
-    {
-        var dbUser = await Users.Where(u => u.TgUserId == userId).FirstOrDefaultAsync(cancellationToken);
-
-        if (dbUser == null) throw new IUserStorage.UserNotFound(userId);
-
-        return new User(await UserBackend.Create(dbUser, this, cancellationToken));
-    }
-
-    public async ValueTask<bool> WithCreateOrGetUser(Chat chat, Telegram.Bot.Types.User user, Func<User, ValueTask<bool>> action,
+    public async ValueTask<bool> WithCreateOrGetUser(Chat chat, Telegram.Bot.Types.User user, Func<IUser, ValueTask<bool>> action,
         CancellationToken cancellationToken = default)
     {
         var chatId = chat.Id;
@@ -288,7 +191,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             await SaveChangesAsync(cancellationToken);
         }
 
-        var domainUser = new User(await UserBackend.Create(dbUser, this, cancellationToken));
+        var domainUser = await UserBackend.Create(dbUser, this, cancellationToken);
 
         var res = await action(domainUser);
         await UserToMeetings.Where(m=>m.UserId == dbUser.Id).ExecuteUpdateAsync(
@@ -299,14 +202,14 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         return res;
     }
 
-    public async ValueTask<bool> WithGetUser(long chatId, Func<User, ValueTask<bool>> action,
+    public async ValueTask<bool> WithGetUser(long chatId, Func<IUser, ValueTask<bool>> action,
         CancellationToken cancellationToken = default)
     {
         await using var tx = await Database.BeginTransactionAsync(cancellationToken);
         var dbUser = await Users.Where(u => u.ChatId == chatId)
             .FirstOrDefaultAsync(cancellationToken);
         if (dbUser == null) throw new IUserStorage.UserNotFound(chatId);
-        var domainUser = new User(await UserBackend.Create(dbUser, this, cancellationToken));
+        var domainUser = await UserBackend.Create(dbUser, this, cancellationToken);
 
         var res = await action(domainUser);
         await UserToMeetings.Where(m=>m.UserId == dbUser.Id).ExecuteUpdateAsync(
@@ -316,7 +219,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         return res;
     }
 
-    public async ValueTask<bool> Save(User domainPoll, CancellationToken cancellationToken = default)
+    public async ValueTask<bool> Save(IUser domainPoll, CancellationToken cancellationToken = default)
     {
         await SaveChangesAsync(cancellationToken);
         return true;
@@ -328,9 +231,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
     }
     
 
-    public async ValueTask Save(User user, string poolId, IReadOnlyList<ConversationTopic> topics, CancellationToken cancellationToken)
+    public async ValueTask Save(IUser user, string poolId, IReadOnlyList<ConversationTopic> topics, CancellationToken cancellationToken)
     {
-        if (user.Storage is UserBackend userStorage)
+        if (user is UserBackend userStorage)
         {
             var pool = new DbPool
             {
@@ -385,11 +288,11 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             topics.Insert(tuple.Index, Map(tuple.topic));
         }
         
-        return new Poll(new User(await UserBackend.Create(pool.dbUser,  this, cancellationToken)), pool.dbPool.ExternalId, [..topics]);
+        return new Poll(await UserBackend.Create(pool.dbUser,  this, cancellationToken), pool.dbPool.ExternalId, [..topics]);
 
     }
 
-    public async ValueTask<(bool, Meeting? meeting)> TryFindMatch(User.SearchInfo searchInfo,
+    public async ValueTask<(bool, IMeeting? meeting)> TryFindMatch(IUser.SearchInfo searchInfo,
         CancellationToken cancellationToken)
     {
         using var _ = logger.BeginScope(new { searchInfo });
@@ -408,9 +311,9 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
 
         var targetParticipation = searchInfo.ParticipationMode switch
         {
-            User.ParticipationMode.Unknown => (false, 0),
-            User.ParticipationMode.Online => (true,1), 
-            User.ParticipationMode.Offline => (true,2),
+            IUser.ParticipationMode.Unknown => (false, 0),
+            IUser.ParticipationMode.Online => (true,1), 
+            IUser.ParticipationMode.Offline => (true,2),
             _ => throw new ArgumentOutOfRangeException()
         };
 
@@ -430,33 +333,38 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             where m.Status == 1
             select mu.UserId;
         
-        var score = 
-            from mu in UserToMeetings
-            where mu.UserId == user.Id
-            join m in Meetings on mu.MeetingId equals m.Id
-            join muo in UserToMeetings.Where(it=>it.UserId != user.Id) on m.Id equals muo.MeetingId
-            where m.Status != 1
-            select new {
-                mu.UserId,
-                m.Status 
-                };
+        var alreadyMeet = 
+            from um in UserToMeetings
+            where um.UserId == user.Id
+            join am in UserToMeetings on um.MeetingId equals am.MeetingId
+            select am.UserId;
+        
+        // var score = 
+        //     from mu in UserToMeetings
+        //     where mu.UserId == user.Id
+        //     join m in Meetings on mu.MeetingId equals m.Id
+        //     join muo in UserToMeetings.Where(it=>it.UserId != user.Id) on m.Id equals muo.MeetingId
+        //     where m.Status != 1
+        //     select new {
+        //         mu.UserId,
+        //         m.Status 
+        //         };
 
 
         IQueryable<DbUser> candidates;
         if (targetParticipation.Item1)
         {
             candidates = from u in Users
-                from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
-                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.ParticipationMode == targetParticipation.Item2 && u.State == 3
-                orderby s.Status
+                where !inMeetings.Contains(u.Id) && u.Id != user.Id 
+                                                 && u.ParticipationMode == targetParticipation.Item2 
+                                                 && u.State == 3
+                                                 && !alreadyMeet.Contains(u.Id)
                 select u;
         }
         else
         {
             candidates = from u in Users
-                from s in score.Where(it => it.UserId == u.Id).DefaultIfEmpty()
-                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.State == 3
-                orderby s.Status
+                where !inMeetings.Contains(u.Id) && u.Id != user.Id && u.State == 3 && !alreadyMeet.Contains(u.Id)
                 select u;
         }
 
@@ -465,8 +373,24 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
         {
             return (false, null);
         }
-        
-        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+
+        DbMeeting dbMeeting;
+        if (Database.CurrentTransaction != null)
+        {
+            
+            dbMeeting = await CreateDbMeeting(cancellationToken, user, candidate);
+        }
+        else
+        {
+            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            dbMeeting = await CreateDbMeeting(cancellationToken, user, candidate);
+            await tx.CommitAsync(cancellationToken);
+        }
+        return (true, new MeetingBackend(dbMeeting, MeetingUserWithDbId.Create(user), MeetingUserWithDbId.Create(candidate), MeetingUserWithDbId.Create(user), [MeetingUserWithDbId.Create(candidate)],this));
+    }
+
+    private async ValueTask<DbMeeting> CreateDbMeeting(CancellationToken cancellationToken, DbUser user, DbUser candidate)
+    {
         var dbMeeting = new DbMeeting
         {
             Status = 1,
@@ -494,8 +418,7 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
 
         await SaveChangesAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
-        return (true, new Meeting(new MeetingBackend(dbMeeting, MeetingUserWithDbId.Create(user), MeetingUserWithDbId.Create(candidate), MeetingUserWithDbId.Create(user), [MeetingUserWithDbId.Create(candidate)],this)));
+        return dbMeeting;
     }
 
     public async ValueTask Clear(CancellationToken cancellationToken)
@@ -509,82 +432,102 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
        await SaveChangesAsync(cancellationToken);
     }
 
-    record MeetingUserWithDbId(Meeting.User MeetingUser, long DbId)
+    record MeetingUserWithDbId(IMeeting.User MeetingUser, long DbId)
     {
         public static MeetingUserWithDbId Create(DbUser dbUser)
         {
-            return new MeetingUserWithDbId(new Meeting.User(new User.LinkData(dbUser.TgUserId, dbUser.Username), dbUser.ChatId, false), dbUser.Id);
+            return new MeetingUserWithDbId(new IMeeting.User(new IUser.LinkData(dbUser.TgUserId, dbUser.Username), dbUser.ChatId, false), dbUser.Id);
         }
     };
     
-    private class MeetingBackend(DbMeeting meeting, MeetingUserWithDbId one, MeetingUserWithDbId another, MeetingUserWithDbId source, IReadOnlyCollection<MeetingUserWithDbId> other, ApplicationDbContext context) : IMeetingBackend
+    private class MeetingBackend(DbMeeting meeting, MeetingUserWithDbId one, MeetingUserWithDbId another, MeetingUserWithDbId source, IReadOnlyCollection<MeetingUserWithDbId> other, ApplicationDbContext context) : IMeeting
     {
-        public Meeting.User One => one.MeetingUser;
-        public Meeting.User Another => another.MeetingUser;
-        public IEnumerable<Meeting.User> OtherUsers => other.Select(it=>it.MeetingUser);
-        public bool InProgress => meeting.Status == 1;
-        public Meeting.User Source => source.MeetingUser;
-        public bool IsCompleted => meeting.Status > 1;
+        IMeeting.User IMeeting.Another => another.MeetingUser;
 
-        public ValueTask Cancel(CancellationToken cancellationToken)
+        IEnumerable<IMeeting.User> IMeeting.OtherUsers => other.Select(it=>it.MeetingUser);
+
+        IMeeting.User IMeeting.One => one.MeetingUser;
+        
+        public bool InProgress => meeting.Status == 1;
+
+        IMeeting.User IMeeting.Source => source.MeetingUser;
+        
+        public bool IsCompleted => meeting.Status > 1;
+        public ValueTask<bool> TryCancel(CancellationToken cancellationToken)
         {
             return context.CancelMeeting(meeting,  cancellationToken);
         }
 
-        public ValueTask Complete(CancellationToken cancellationToken)
+        public ValueTask<bool> TryCompleted(CancellationToken cancellationToken)
         {
             return context.CompleteMeeting(meeting,  cancellationToken);
         }
 
-        public ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken)
+        public ValueTask<bool> TrySubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken)
         {
             return context.SubmitFeedback(meeting, source, eventPayloadText, cancellationToken);
         }
+        
     }
 
-    private async ValueTask SubmitFeedback(DbMeeting meeting, MeetingUserWithDbId source, string? eventPayloadText,
+    private async ValueTask<bool> SubmitFeedback(DbMeeting meeting, MeetingUserWithDbId source, string? eventPayloadText,
         CancellationToken cancellationToken)
     {
-        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
-        Feedbacks.Add(new DbFeedback
+        if (source.MeetingUser.FeedbackAvailible)
         {
-            MeetingId = meeting.Id,
-            UserId = source.DbId,
-            Feedback = eventPayloadText?? ""
-        });
-        await UserToMeetings.Where(m=>m.MeetingId == meeting.Id).ExecuteUpdateAsync(
-            um=>um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
+            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            Feedbacks.Add(new DbFeedback
+            {
+                MeetingId = meeting.Id,
+                UserId = source.DbId,
+                Feedback = eventPayloadText ?? ""
+            });
+            await UserToMeetings.Where(m => m.MeetingId == meeting.Id).ExecuteUpdateAsync(
+                um => um.SetProperty(i => i.FeedbackAvailable, false), cancellationToken);
 
-        await SaveChangesAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
+            await SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+            return true;
+        }
+        return false;
     }
 
-    private async ValueTask CompleteMeeting(DbMeeting meeting, CancellationToken cancellationToken)
+    private async ValueTask<bool> CompleteMeeting(DbMeeting meeting, CancellationToken cancellationToken)
     {
-        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
-        
-        meeting.TypedStatus = DbMeeting.StatusEnum.Finished;
-        
-        await UserToMeetings.Where(m=>m.MeetingId == meeting.Id).ExecuteUpdateAsync(
-            um=>um.SetProperty(i => i.FeedbackAvailable, true), cancellationToken);
-        
-        await SaveChangesAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
+        if (meeting.TypedStatus == DbMeeting.StatusEnum.Current)
+        {
+            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+
+            meeting.TypedStatus = DbMeeting.StatusEnum.Finished;
+
+            await UserToMeetings.Where(m => m.MeetingId == meeting.Id).ExecuteUpdateAsync(
+                um => um.SetProperty(i => i.FeedbackAvailable, true), cancellationToken);
+
+            await SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+            return true;
+        }
+
+        return false;
     }
 
-    private async ValueTask CancelMeeting(DbMeeting meeting, CancellationToken cancellationToken)
+    private async ValueTask<bool> CancelMeeting(DbMeeting meeting, CancellationToken cancellationToken)
     {
-        await using var tx = await Database.BeginTransactionAsync(cancellationToken);
-        
-        meeting.TypedStatus = DbMeeting.StatusEnum.Cancelled;
-        await UserToMeetings.Where(m=>m.MeetingId == meeting.Id).ExecuteUpdateAsync(
-            um=>um.SetProperty(i => i.FeedbackAvailable, true), cancellationToken);
-        
-        await SaveChangesAsync(cancellationToken);
-        await tx.CommitAsync(cancellationToken);
+        if (meeting.TypedStatus == DbMeeting.StatusEnum.Current)
+        {
+            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            meeting.TypedStatus = DbMeeting.StatusEnum.Cancelled;
+            await UserToMeetings.Where(m => m.MeetingId == meeting.Id).ExecuteUpdateAsync(
+                um => um.SetProperty(i => i.FeedbackAvailable, true), cancellationToken);
+
+            await SaveChangesAsync(cancellationToken);
+            await tx.CommitAsync(cancellationToken);
+            return true;
+        }
+        return false;
     }
 
-    public async ValueTask<bool> WithMeetingForUser(Chat chat, Telegram.Bot.Types.User user, Func<Meeting, ValueTask<bool>> action, CancellationToken cancellationToken)
+    public async ValueTask<bool> WithMeetingForUser(Chat chat, Telegram.Bot.Types.User user, Func<IMeeting, ValueTask<bool>> action, CancellationToken cancellationToken)
     {
         var currentMeeting = from um in UserToMeetings
             join u in Users on um.UserId equals u.Id
@@ -605,15 +548,15 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             join um in UserToMeetings on m.Id equals um.MeetingId 
             join u in Users on um.UserId equals u.Id
             where m.Id == meeting.Id
-                select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId, um.FeedbackAvailable), u.Id);
+                select new MeetingUserWithDbId(new IMeeting.User(new IUser.LinkData(u.TgUserId, u.Username), u.ChatId, um.FeedbackAvailable), u.Id);
         var users = await usersQuery.ToListAsync(cancellationToken);
         var source = users.First(u=>u.MeetingUser.ChatId == chat.Id);
         var rest = users.Where(u => u.MeetingUser.ChatId != chat.Id);
-        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(), source, [..rest], this));
+        var domain = new MeetingBackend(meeting, users.First(), users.Skip(1).First(), source, [..rest], this);
         return await action(domain);
     }
 
-    public async ValueTask<bool> WithMeetingForChat(long chatId, Func<Meeting, ValueTask<bool>> action, CancellationToken cancellationToken)
+    public async ValueTask<bool> WithMeetingForChat(long chatId, Func<IMeeting, ValueTask<bool>> action, CancellationToken cancellationToken)
     {
         var currentMeeting = from um in UserToMeetings
             join u in Users on um.UserId equals u.Id
@@ -634,11 +577,11 @@ internal class ApplicationDbContext(DbContextOptions<ApplicationDbContext> optio
             join um in UserToMeetings on m.Id equals um.MeetingId 
             join u in Users on um.UserId equals u.Id
             where m.Id == meeting.Id
-            select new MeetingUserWithDbId(new Meeting.User(new User.LinkData(u.TgUserId, u.Username), u.ChatId, um.FeedbackAvailable), u.Id);
+            select new MeetingUserWithDbId(new IMeeting.User(new IUser.LinkData(u.TgUserId, u.Username), u.ChatId, um.FeedbackAvailable), u.Id);
         var users = await usersQuery.ToListAsync(cancellationToken);
         var source = users.First(u=>u.MeetingUser.ChatId == chatId);
         var rest = users.Where(u => u.MeetingUser.ChatId != chatId);
-        var domain = new Meeting(new MeetingBackend(meeting, users.First(), users.Skip(1).First(),source, [..rest],  this));
+        var domain = new MeetingBackend(meeting, users.First(), users.Skip(1).First(),source, [..rest],  this);
         return await action(domain);
     }
 }

@@ -33,15 +33,15 @@ internal abstract class UserUniversalCommandHandler<TCommand>(ILogger<TCommand> 
     }
 
     protected abstract ValueTask<bool> Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
-        Domain.User domainUser, long chatId);
+        Domain.IUser domainUser, long chatId);
 }
 
 internal interface IMeetingStorage
 {
     public class MeetingForUserNotFound(long id) : Exception($"Current meeting for user {id} not found");
     public class MeetingFoChatNotFound(long id) : Exception($"Current meeting for user with chat id {id} not found");
-    ValueTask<bool> WithMeetingForUser(Chat chat, User user, Func<Domain.Meeting, ValueTask<bool>> action, CancellationToken cancellationToken);
-    ValueTask<bool> WithMeetingForChat(long chatId, Func<Domain.Meeting, ValueTask<bool>> action, CancellationToken cancellationToken);
+    ValueTask<bool> WithMeetingForUser(Chat chat, User user, Func<Domain.IMeeting, ValueTask<bool>> action, CancellationToken cancellationToken);
+    ValueTask<bool> WithMeetingForChat(long chatId, Func<Domain.IMeeting, ValueTask<bool>> action, CancellationToken cancellationToken);
 } 
 
 internal abstract class MeetingUniversalCommandHandler<TCommand>(ILogger<TCommand> logger, IMeetingStorage meetingStorage)
@@ -72,5 +72,5 @@ internal abstract class MeetingUniversalCommandHandler<TCommand>(ILogger<TComman
     }
 
     protected abstract ValueTask<bool> Handle(ITelegramBotClient botClient, CancellationToken cancellationToken,
-        Domain.Meeting meeting, long sourceChatId);
+        Domain.IMeeting meeting, long sourceChatId);
 }

@@ -3,6 +3,7 @@ namespace NetworkingBot.Commands;
 public static class Commands
 {
     public static JoinCommand Join => new();
+    public static JustWatching JustWatching => new();
     public static PostponeCommand Postpone => new();
     public static OnlineCommand Online => new();
     public static OfflineCommand Offline => new();
@@ -18,6 +19,7 @@ public class StartCommand : ISlashCommand
 
 public class JoinCommand() : SlashAndInlineSlashCommand(Texts.YesButton(), "join");
 
+public class JustWatching() : SlashAndInlineSlashCommand(Texts.LaterButton(), "just_watching");
 public class PostponeCommand() : SlashAndInlineSlashCommand(Texts.LaterButton(), "postpone");
 
 public class OnlineCommand() : SlashAndInlineSlashCommand(Texts.OnlineButton(), "online");

@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
                 .Add<MeetingCanceledCommandHandler>()
                 .Add<MeetingMessageHandler>()
                 .Add<MeetingFeedbackMessageHandler>()
+                .Add<JustWatchingCommandHandler>()
                 .Add<PostponeCommandHandler>());
         services.AddTelegramEventHandlers<CallbackQuery>(opts =>
             opts.Add<JoinCommandHandler>()
@@ -42,6 +43,7 @@ public static class ServiceCollectionExtensions
                 .Add<ReadyForMeetingCommand>()
                 .Add<MeetingHappenCommandHandler>()
                 .Add<MeetingCanceledCommandHandler>()
+                .Add<JustWatchingCommandHandler>()
                 .Add<PostponeCommandHandler>());
         services.AddTelegramEventHandlers<Poll>(opts =>
             opts.Add<ConversationTopicPoolResponse>());

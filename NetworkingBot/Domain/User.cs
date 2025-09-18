@@ -9,21 +9,9 @@ public class ConversationTopic(string id, string name)
     public string Id { get; } = id;
 }
 
-public interface IUserBackend
-{
-    bool IsActive { get; set; }
-    User.ParticipationMode ParticipationMode { get; set; }
-    bool ReadyToParticipate { get; set; }
-    long UserId { get; }
-    string Name { get; }
-    IReadOnlyCollection<ConversationTopic> Topics { get; }
-    long ChatId { get; }
-    void UpdateTopics(ImmutableArray<ConversationTopic> topics);
-}
 
-public class User(IUserBackend storage)
+public interface IUser
 {
-    public IUserBackend Storage => storage;
     public enum ParticipationMode
     {
         Unknown,
@@ -31,32 +19,15 @@ public class User(IUserBackend storage)
         Offline
     }
 
-    public void OptIn()
-    {
-        storage.IsActive = true;
-    }
+    public bool TryOptIn();
 
-    public void OptOut()
-    {
-        storage.IsActive = false;
-        storage.ParticipationMode = ParticipationMode.Unknown;
-        storage.ReadyToParticipate = false;
-    }
+    public bool TryOptOut();
 
-    public void OnlineParticipation()
-    {
-        if (storage.IsActive) storage.ParticipationMode = ParticipationMode.Online;
-    }
+    public bool TryOnlineParticipation();
 
-    public void OfflineParticipation()
-    {
-        if (storage.IsActive) storage.ParticipationMode = ParticipationMode.Offline;
-    }
+    public bool TryOfflineParticipation();
 
-    public void ReadyToParticipate()
-    {
-        storage.ReadyToParticipate = true;
-    }
+    public bool TryReadyToParticipate();
 
     public record SearchInfo(
         long UserId,
@@ -67,68 +38,34 @@ public class User(IUserBackend storage)
         public static SearchInfo Empty => new(0, "", ImmutableList<ConversationTopic>.Empty, ParticipationMode.Unknown);
     };
 
-    public bool TryGetSearchInfo(out SearchInfo searchInfo)
-    {
-        if (storage.ReadyToParticipate)
-        {
-            searchInfo = new SearchInfo(storage.UserId, storage.Name, storage.Topics, storage.ParticipationMode);
-            return true;
-        }
+    public bool TryGetSearchInfo(out SearchInfo searchInfo);
 
-        searchInfo = SearchInfo.Empty;
-        return false;
-    }
-
-    public void SetConversationTopics(ImmutableArray<ConversationTopic> topics)
-    {
-        storage.UpdateTopics(topics);
-    }
+    public void SetConversationTopics(ImmutableArray<ConversationTopic> topics);
 
     public record IdType(long ChatId, long UserId);
 
-    public IdType Id => new(storage.ChatId, storage.UserId);
+    public IdType Id { get; }
 
     public record LinkData(long UserId, string Name);
 
-    public LinkData Link => new(storage.UserId, storage.Name);
+    public LinkData Link { get; }
+    bool TryJustWatch();
 }
 
-public interface IMeetingBackend
+public interface IMeeting
 {
-    Meeting.User One { get; }
-    Meeting.User Another { get; }
-    IEnumerable<Meeting.User> OtherUsers { get; }
-    bool InProgress { get; }
-    Meeting.User Source { get; }
-    bool IsCompleted { get; }
-    ValueTask Cancel(CancellationToken cancellationToken);
-    ValueTask Complete(CancellationToken cancellationToken);
-    ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken);
+    public record User(IUser.LinkData LinkData, long ChatId, bool FeedbackAvailible);
+    public User One { get; }
+    public User Another { get; }
+
+    public IEnumerable<User> OtherUsers { get; }
+    public bool InProgress { get; }
+    public User Source { get; }
+    public bool IsCompleted { get; }
+
+    public ValueTask<bool> TryCancel(CancellationToken cancellationToken);
+
+    public ValueTask<bool> TryCompleted(CancellationToken cancellationToken);
+
+    public ValueTask<bool> TrySubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken);
 }
-
-public class Meeting(IMeetingBackend backend)
-{
-    public record User(Domain.User.LinkData LinkData, long ChatId, bool FeedbackAvailible);
-    public User One => backend.One;
-    public User Another => backend.Another;
-
-    public IEnumerable<User> OtherUsers => backend.OtherUsers;
-    public bool InProgress => backend.InProgress;
-    public User Source => backend.Source;
-    public bool IsCompleted => backend.IsCompleted;
-
-    public ValueTask Cancel(CancellationToken cancellationToken)
-    {
-        return backend.Cancel(cancellationToken);
-    }
-
-    public ValueTask Completed(CancellationToken cancellationToken)
-    {
-        return backend.Complete(cancellationToken);
-    }
-
-    public ValueTask SubmitFeedback(string? eventPayloadText, CancellationToken cancellationToken)
-    {
-        return backend.SubmitFeedback(eventPayloadText, cancellationToken);
-    }
-};
