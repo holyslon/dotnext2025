@@ -100,189 +100,189 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
-  verify-tf:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./iac
-    steps:
-      - name: Checkout the repository to the runner
-        uses: actions/checkout@v4
+#  verify-tf:
+#    runs-on: ubuntu-latest
+#    defaults:
+#      run:
+#        working-directory: ./iac
+#    steps:
+#      - name: Checkout the repository to the runner
+#        uses: actions/checkout@v4
+#
+#      - name: Setup Tf Repos
+#        run: |
+#          cat <<EOF >>~/.terraformrc
+#          provider_installation {
+#              network_mirror {
+#              url = "https://terraform-mirror.yandexcloud.net/"
+#              include = ["registry.terraform.io/*/*"]
+#            }
+#              direct {
+#              exclude = ["registry.terraform.io/*/*"]
+#            }
+#          }
+#          EOF
+#      - name: Setup Tf State config
+#        env:
+#          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+#          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+#        run: |
+#          cat <<EOF >config.s3.tfbackend
+#          access_key="$ACCESS_KEY"
+#          secret_key="$SECRET_KEY"
+#          EOF
+#
+#      - name: Setup Tf Api Key
+#        env:
+#          YC_KEY: ${{ secrets.YC_KEY }}
+#        run: echo "$YC_KEY" > key.json
+#
+#
+#      - name: Setup Terraform with specified version on the runner
+#        uses: hashicorp/setup-terraform@v2
+#        with:
+#          terraform_version: 1.8.5
+#
+#      - name: Terraform init
+#        id: init
+#        run: terraform init -backend-config=config.s3.tfbackend
+#
+#      - name: Terraform format
+#        id: fmt
+#        run: terraform fmt -check -diff
+#
+#      - name: Terraform validate
+#        id: validate
+#        run: terraform validate
+#    
+#  plan-tf:
+#    runs-on: ubuntu-latest
+#    if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
+#    needs:
+#      - package
+#      - verify-tf
+#    defaults: 
+#      run: 
+#        working-directory: ./iac
+#    steps:
+#      - name: Checkout the repository to the runner
+#        uses: actions/checkout@v4
+#      
+#      - name: Setup Tf Repos 
+#        run: |
+#          cat <<EOF >>~/.terraformrc
+#          provider_installation {
+#              network_mirror {
+#              url = "https://terraform-mirror.yandexcloud.net/"
+#              include = ["registry.terraform.io/*/*"]
+#            }
+#              direct {
+#              exclude = ["registry.terraform.io/*/*"]
+#            }
+#          }
+#          EOF
+#      - name: Setup Tf State config
+#        env:
+#          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+#          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+#        run:  |
+#          cat <<EOF >config.s3.tfbackend
+#          access_key="$ACCESS_KEY"
+#          secret_key="$SECRET_KEY"
+#          EOF
+#      
+#      - name: Setup Tf Api Key
+#        env:
+#          YC_KEY: ${{ secrets.YC_KEY }}
+#        run: echo "$YC_KEY" > key.json
+#              
+#      
+#      - name: Setup Terraform with specified version on the runner
+#        uses: hashicorp/setup-terraform@v2
+#        with:
+#          terraform_version: 1.8.5
+#
+#      - name: Terraform init
+#        id: init
+#        run: terraform init -backend-config=config.s3.tfbackend
+#        
+#      - name: Set Version
+#        run: echo "BOT_VERSION=${GITHUB_REF#refs/tags/networking-bot-}" >> $GITHUB_ENV
+#        
+#      - name: Terraform plan
+#        id: plan
+#        env:
+#          BOT_VERSION: ${{ env.BOT_VERSION }}
+#          TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
+#        run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -var="telegram_api_key=$TELEGRAM_API_KEY" -out="./planfile"
+#        continue-on-error: true
+#
+#      - name: Upload plan
+#        uses: actions/upload-artifact@v4
+#        with:
+#          include-hidden-files: 'true'
+#          name: networking-bot-planfile
+#          path: ./iac/planfile
 
-      - name: Setup Tf Repos
-        run: |
-          cat <<EOF >>~/.terraformrc
-          provider_installation {
-              network_mirror {
-              url = "https://terraform-mirror.yandexcloud.net/"
-              include = ["registry.terraform.io/*/*"]
-            }
-              direct {
-              exclude = ["registry.terraform.io/*/*"]
-            }
-          }
-          EOF
-      - name: Setup Tf State config
-        env:
-          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run: |
-          cat <<EOF >config.s3.tfbackend
-          access_key="$ACCESS_KEY"
-          secret_key="$SECRET_KEY"
-          EOF
-
-      - name: Setup Tf Api Key
-        env:
-          YC_KEY: ${{ secrets.YC_KEY }}
-        run: echo "$YC_KEY" > key.json
-
-
-      - name: Setup Terraform with specified version on the runner
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.8.5
-
-      - name: Terraform init
-        id: init
-        run: terraform init -backend-config=config.s3.tfbackend
-
-      - name: Terraform format
-        id: fmt
-        run: terraform fmt -check -diff
-
-      - name: Terraform validate
-        id: validate
-        run: terraform validate
-    
-  plan-tf:
-    runs-on: ubuntu-latest
-    if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
-    needs:
-      - package
-      - verify-tf
-    defaults: 
-      run: 
-        working-directory: ./iac
-    steps:
-      - name: Checkout the repository to the runner
-        uses: actions/checkout@v4
-      
-      - name: Setup Tf Repos 
-        run: |
-          cat <<EOF >>~/.terraformrc
-          provider_installation {
-              network_mirror {
-              url = "https://terraform-mirror.yandexcloud.net/"
-              include = ["registry.terraform.io/*/*"]
-            }
-              direct {
-              exclude = ["registry.terraform.io/*/*"]
-            }
-          }
-          EOF
-      - name: Setup Tf State config
-        env:
-          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run:  |
-          cat <<EOF >config.s3.tfbackend
-          access_key="$ACCESS_KEY"
-          secret_key="$SECRET_KEY"
-          EOF
-      
-      - name: Setup Tf Api Key
-        env:
-          YC_KEY: ${{ secrets.YC_KEY }}
-        run: echo "$YC_KEY" > key.json
-              
-      
-      - name: Setup Terraform with specified version on the runner
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.8.5
-
-      - name: Terraform init
-        id: init
-        run: terraform init -backend-config=config.s3.tfbackend
-        
-      - name: Set Version
-        run: echo "BOT_VERSION=${GITHUB_REF#refs/tags/networking-bot-}" >> $GITHUB_ENV
-        
-      - name: Terraform plan
-        id: plan
-        env:
-          BOT_VERSION: ${{ env.BOT_VERSION }}
-          TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
-        run: terraform plan -no-color -input=false -var="app_version=$BOT_VERSION" -var="telegram_api_key=$TELEGRAM_API_KEY" -out="./planfile"
-        continue-on-error: true
-
-      - name: Upload plan
-        uses: actions/upload-artifact@v4
-        with:
-          include-hidden-files: 'true'
-          name: networking-bot-planfile
-          path: ./iac/planfile
-
-  apply-tf:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./iac
-    if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
-    needs:
-      - package
-      - verify-tf
-      - plan-tf
-    steps:
-      - name: Checkout the repository to the runner
-        uses: actions/checkout@v4
-
-      - name: Setup Tf Repos
-        run: |
-          cat <<EOF >>~/.terraformrc
-          provider_installation {
-              network_mirror {
-              url = "https://terraform-mirror.yandexcloud.net/"
-              include = ["registry.terraform.io/*/*"]
-            }
-              direct {
-              exclude = ["registry.terraform.io/*/*"]
-            }
-          }
-          EOF
-      - name: Setup Tf State config
-        env:
-          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        run:  |
-          cat <<EOF >config.s3.tfbackend
-          access_key="$ACCESS_KEY"
-          secret_key="$SECRET_KEY"
-          EOF
-
-      - name: Setup Tf Api Key
-        env:
-          YC_KEY: ${{ secrets.YC_KEY }}
-        run: echo "$YC_KEY" > key.json
-      
-      - uses: actions/download-artifact@v4
-        with:
-          name: networking-bot-planfile
-          path: ./iac/plan
-
-      - name: Setup Terraform with specified version on the runner
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.8.5
-
-      - name: Terraform init
-        id: init
-        run: terraform init -backend-config=config.s3.tfbackend
-        
-      - name: Set Version
-        run: echo "BOT_VERSION=${GITHUB_REF#refs/tags/networking-bot-}" >> $GITHUB_ENV
-
-      - name: Terraform apply
-        id: plan
-        run: terraform apply -auto-approve "./plan/planfile"
+#  apply-tf:
+#    runs-on: ubuntu-latest
+#    defaults:
+#      run:
+#        working-directory: ./iac
+#    if: startsWith(github.event.ref, 'refs/tags/networking-bot-')
+#    needs:
+#      - package
+#      - verify-tf
+#      - plan-tf
+#    steps:
+#      - name: Checkout the repository to the runner
+#        uses: actions/checkout@v4
+#
+#      - name: Setup Tf Repos
+#        run: |
+#          cat <<EOF >>~/.terraformrc
+#          provider_installation {
+#              network_mirror {
+#              url = "https://terraform-mirror.yandexcloud.net/"
+#              include = ["registry.terraform.io/*/*"]
+#            }
+#              direct {
+#              exclude = ["registry.terraform.io/*/*"]
+#            }
+#          }
+#          EOF
+#      - name: Setup Tf State config
+#        env:
+#          ACCESS_KEY: ${{ secrets.ACCESS_KEY }}
+#          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+#        run:  |
+#          cat <<EOF >config.s3.tfbackend
+#          access_key="$ACCESS_KEY"
+#          secret_key="$SECRET_KEY"
+#          EOF
+#
+#      - name: Setup Tf Api Key
+#        env:
+#          YC_KEY: ${{ secrets.YC_KEY }}
+#        run: echo "$YC_KEY" > key.json
+#      
+#      - uses: actions/download-artifact@v4
+#        with:
+#          name: networking-bot-planfile
+#          path: ./iac/plan
+#
+#      - name: Setup Terraform with specified version on the runner
+#        uses: hashicorp/setup-terraform@v2
+#        with:
+#          terraform_version: 1.8.5
+#
+#      - name: Terraform init
+#        id: init
+#        run: terraform init -backend-config=config.s3.tfbackend
+#        
+#      - name: Set Version
+#        run: echo "BOT_VERSION=${GITHUB_REF#refs/tags/networking-bot-}" >> $GITHUB_ENV
+#
+#      - name: Terraform apply
+#        id: plan
+#        run: terraform apply -auto-approve "./plan/planfile"
